@@ -1,0 +1,18 @@
+.verse-loader {
+  display: flex;
+  gap: 0.05em;
+  margin-bottom: 1.5rem;
+  font-size: 2.7rem;
+  font-weight: 700;
+  color: #f4a261;          /* your highlight orange */
+}
+
+.verse-letter {
+  animation: jump 0.9s ease-in-out infinite;
+}
+
+@keyframes jump {
+  0%,100% { transform: translateY(0); }
+  40%     { transform: translateY(-0.45em); }
+  60%     { transform: translateY(0.2em); }
+}
