@@ -8,7 +8,7 @@ const genToken = (id) =>
 // REGISTER controller
 exports.register = async (req, res) => {
   console.log("REGISTER CONTROLLER HIT");
-  const { name, email, password, bio } = req.body;
+  const { name, email, password, bio, orgName } = req.body;
 
   try {
     const exists = await Organizer.findOne({ email });
@@ -16,12 +16,13 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email already used' });
     }
 
-    const org = await Organizer.create({ name, email, password, bio });
+    const org = await Organizer.create({ name, email, password, bio, orgName });
 
     res.status(201).json({
       _id: org._id,
       name: org.name,
       email: org.email,
+      orgName: org.orgName,
       token: genToken(org._id),
     });
   } catch (err) {

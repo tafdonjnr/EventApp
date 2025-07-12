@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-// Inline styles object for the component UI
+// Inline styles for consistent UI
 const styles = {
   page: {
     backgroundColor: '#1e1e2f',
@@ -107,22 +108,14 @@ const styles = {
 };
 
 export default function OrganizerProfile() {
-  // State for organizer profile data
   const [organizer, setOrganizer] = useState(null);
-  // Loading state while fetching profile
   const [loading, setLoading] = useState(true);
-  // Error message state
   const [error, setError] = useState('');
-  // Edit mode toggle
   const [editMode, setEditMode] = useState(false);
-  // Hover state for the edit button styling
   const [hovering, setHovering] = useState(false);
-  // State to store the selected logo file before upload
   const [logoFile, setLogoFile] = useState(null);
-  // Submitting state to disable form during update
   const [submitting, setSubmitting] = useState(false);
 
-  // Form fields state
   const [formData, setFormData] = useState({
     name: '',
     orgName: '',
@@ -132,21 +125,17 @@ export default function OrganizerProfile() {
     instagram: '',
   });
 
-  // Get token from localStorage for auth
   const token = localStorage.getItem('token');
-  // useNavigate hook to redirect user
   const navigate = useNavigate();
 
-  // Fetch organizer profile on component mount
+  // 🟢 Fetch organizer profile when component mounts
   useEffect(() => {
     const fetchOrganizer = async () => {
       try {
-        // Fetch organizer data from API with auth header
         const res = await fetch('/api/organizers/dashboard', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // If unauthorized, remove token and redirect to home/login
         if (res.status === 401 || res.status === 403) {
           localStorage.removeItem('token');
           navigate('/');
@@ -158,7 +147,6 @@ export default function OrganizerProfile() {
         if (!data.organizer) {
           setError('Organizer not found.');
         } else {
-          // Set organizer state and populate form fields
           setOrganizer(data.organizer);
           setFormData({
             name: data.organizer.name || '',
@@ -170,7 +158,6 @@ export default function OrganizerProfile() {
           });
         }
       } catch (err) {
-        console.error('Error fetching profile:', err);
         setError('Failed to load profile.');
       } finally {
         setLoading(false);
@@ -180,7 +167,7 @@ export default function OrganizerProfile() {
     fetchOrganizer();
   }, [token, navigate]);
 
-  // Cleanup to revoke object URL when logo preview changes
+  // 🧹 Clean up preview blob URLs
   useEffect(() => {
     return () => {
       if (
@@ -193,77 +180,72 @@ export default function OrganizerProfile() {
     };
   }, [formData.logo]);
 
-  // Handle input changes, including file input for logo
+  // 🖊️ Handle form input changes
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
     if (name === 'logo' && files.length > 0) {
-      // If a logo file is selected, create an object URL for preview
       const file = files[0];
       setLogoFile(file);
       const imageUrl = URL.createObjectURL(file);
       setFormData((prev) => ({ ...prev, logo: imageUrl }));
     } else {
-      // Update normal text inputs
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  // Handle form submit for profile update
-  const handleSubmit = async (e) => {
+  // ✅ Save updated profile
+  const handleProfileSave = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
 
     try {
-      // Prepare form data to send (including file)
       const formPayload = new FormData();
       formPayload.append('name', formData.name);
       formPayload.append('orgName', formData.orgName);
       formPayload.append('email', formData.email);
       formPayload.append('twitter', formData.twitter);
       formPayload.append('instagram', formData.instagram);
-
       if (logoFile) {
         formPayload.append('logo', logoFile);
       }
 
-      // Send PUT request to update profile
       const response = await fetch('/api/organizers/profile', {
         method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // Note: Do NOT set Content-Type here when sending FormData, browser sets it automatically
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formPayload,
       });
 
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error('Server error. Please try again later.');
-      }
+      const data = await response.json();
 
       if (response.ok) {
-        // Update local state with updated profile, reset edit mode and logoFile
-        setOrganizer(data.updatedOrganizer || formData);
+        // Use the response data directly instead of making another API call
+        if (data.organizer) {
+          setOrganizer(data.organizer);
+          setFormData({
+            name: data.organizer.name || '',
+            orgName: data.organizer.orgName || '',
+            email: data.organizer.email || '',
+            logo: data.organizer.logo || '',
+            twitter: data.organizer.twitter || '',
+            instagram: data.organizer.instagram || '',
+          });
+        }
+
         setEditMode(false);
         setLogoFile(null);
       } else {
         setError(data.message || 'Failed to update profile.');
       }
     } catch (err) {
-      console.error('Update error:', err);
-      setError(err.message || 'An error occurred while updating.');
+      setError(err.message || 'Network error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Render loading state
   if (loading) return <p style={styles.loading}>Loading...</p>;
-  // Render error state
   if (error) return <p style={styles.error}>{error}</p>;
 
   return (
@@ -273,14 +255,40 @@ export default function OrganizerProfile() {
 
         {!editMode ? (
           <>
-            {/* Show profile logo or default */}
-            <img
-              src={organizer.logo || '/default-logo.png'}
-              alt="Logo"
-              style={styles.profileImage}
-            />
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '1.5rem' }}>
+              {formData.logo ? (
+                <img
+                  src={formData.logo.startsWith('blob:') ? formData.logo : `http://localhost:5000${formData.logo}`}
+                  alt="Organizer Logo"
+                  style={{
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid #f4a261',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '120px',
+                  height: '120px',
+                  borderRadius: '50%',
+                  backgroundColor: '#444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '3px solid #f4a261',
+                  fontSize: '3rem',
+                  color: '#888'
+                }}>
+                  <i className="fas fa-user" />
+                </div>
+              )}
+            </div>
+
+            {/* Profile Details */}
             <div>
-              {/* Display profile fields */}
               <div style={styles.field}>Name:</div>
               <div style={styles.value}>{organizer.name || 'N/A'}</div>
 
@@ -297,7 +305,7 @@ export default function OrganizerProfile() {
               <div style={styles.value}>{organizer.instagram || 'N/A'}</div>
             </div>
 
-            {/* Button to switch to edit mode */}
+            {/* Edit Button */}
             <button
               onClick={() => setEditMode(true)}
               style={{ ...styles.button, ...(hovering ? styles.buttonHover : {}) }}
@@ -308,9 +316,8 @@ export default function OrganizerProfile() {
             </button>
           </>
         ) : (
-          // Edit form mode
-          <form onSubmit={handleSubmit}>
-            {/* Render text inputs for editable fields */}
+          // ✏️ Editable Form
+          <form onSubmit={handleProfileSave}>
             {['name', 'orgName', 'email', 'twitter', 'instagram'].map((field) => (
               <input
                 key={field}
@@ -323,21 +330,39 @@ export default function OrganizerProfile() {
               />
             ))}
 
-            {/* File input for logo */}
-            <input
-              type="file"
-              accept="image/*"
-              name="logo"
-              onChange={handleChange}
-              style={styles.input}
-            />
+            {/* Logo Upload */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f4f4f4', fontWeight: '600' }}>
+                Logo Image:
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                name="logo"
+                onChange={handleChange}
+                style={styles.input}
+              />
+            </div>
 
-            {/* Preview logo image if available */}
+            {/* Preview uploaded logo */}
             {formData.logo && (
-              <img src={formData.logo} alt="Preview" style={styles.profileImage} />
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                <img 
+                  src={formData.logo} 
+                  alt="Preview" 
+                  style={{
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid #f4a261',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                  }} 
+                />
+              </div>
             )}
 
-            {/* Buttons for save and cancel */}
+            {/* Save and Cancel Buttons */}
             <div style={styles.btnGroup}>
               <button type="submit" style={styles.saveBtn} disabled={submitting}>
                 {submitting ? 'Saving...' : 'Save'}
@@ -345,9 +370,12 @@ export default function OrganizerProfile() {
               <button
                 type="button"
                 onClick={() => {
-                  // Cancel editing: reset form data to original profile and clear logoFile
                   setEditMode(false);
                   setLogoFile(null);
+                  // Clean up any blob URL
+                  if (formData.logo && formData.logo.startsWith('blob:')) {
+                    URL.revokeObjectURL(formData.logo);
+                  }
                   setFormData({
                     name: organizer.name || '',
                     orgName: organizer.orgName || '',

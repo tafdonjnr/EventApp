@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 
 const styles = {
@@ -35,12 +36,29 @@ const styles = {
     padding: '12px',
     backgroundColor: '#f4a261',
     color: '#1e1e2f',
-    fontWeight: 700,
+    fontWeight: '700',
     border: 'none',
     borderRadius: 8,
     cursor: 'pointer',
     fontSize: '1.1rem',
     transition: 'background-color 0.25s ease',
+  },
+  errorMsg: {
+    color: '#ff6b6b',
+    marginBottom: '1rem',
+    textAlign: 'center',
+  },
+  successMsg: {
+    color: '#51cf66',
+    marginBottom: '1rem',
+    textAlign: 'center',
+  },
+  link: {
+    color: '#f4a261',
+    textDecoration: 'none',
+    textAlign: 'center',
+    display: 'block',
+    marginTop: '1rem',
   },
 };
 
@@ -70,21 +88,80 @@ export default function AttendeeRegister() {
     email: '',
     password: '',
     confirm: '',
+    phone: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // TODO: handle form submission (API call)
-    console.log('Submit', form);
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    // Validation
+    if (!form.name || !form.email || !form.password || !form.confirm) {
+      setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+
+    if (form.password !== form.confirm) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/attendees/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          phone: form.phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Registration successful! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/attendee/login');
+        }, 2000);
+      } else {
+        setError(data.message || 'Registration failed');
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <AuthLayout>
       <h2 style={styles.header}>Attendee Sign-Up</h2>
+
+      {error && <div style={styles.errorMsg}>{error}</div>}
+      {success && <div style={styles.successMsg}>{success}</div>}
 
       <form onSubmit={handleSubmit} style={styles.form} noValidate>
         <InputField
@@ -98,6 +175,13 @@ export default function AttendeeRegister() {
           placeholder="Email"
           name="email"
           value={form.email}
+          onChange={handleChange}
+        />
+        <InputField
+          type="tel"
+          placeholder="Phone (optional)"
+          name="phone"
+          value={form.phone}
           onChange={handleChange}
         />
         <InputField
@@ -117,13 +201,18 @@ export default function AttendeeRegister() {
 
         <button
           type="submit"
+          disabled={loading}
           style={styles.button}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = '#e08a3f')}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = '#f4a261')}
+          onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#e08a3f')}
+          onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#f4a261')}
         >
-          Register
+          {loading ? 'Creating Account...' : 'Register'}
         </button>
       </form>
+
+      <a href="/attendee/login" style={styles.link}>
+        Already have an account? Log in here
+      </a>
     </AuthLayout>
   );
 }

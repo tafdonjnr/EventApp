@@ -10,6 +10,9 @@ import OrganizerLogin from './pages/OrganizerLogin';
 import OrganizerRegister from './pages/OrganizerRegister';
 import AttendeeRegister  from './pages/AttendeeRegister';
 import AttendeeLogin     from './pages/AttendeeLogin';
+import AttendeeDashboard from './pages/AttendeeDashboard';
+import CreateEvent from './pages/CreateEvent';
+import EventDetail from './pages/EventDetail';
 
 function App() {
   return (
@@ -20,10 +23,14 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/organizer/dashboard" element={<OrganizerDashboard />} />
         <Route path="/organizer/profile" element={<OrganizerProfile />} />
+        <Route path="/organizer/create-event" element={<CreateEvent />} />
+        <Route path="/organizer/edit-event/:id" element={<CreateEvent />} />
         <Route path="/attendee/register"  element={<AttendeeRegister />} />
         <Route path="/attendee/login" element={<AttendeeLogin />} />
+        <Route path="/attendee/dashboard" element={<AttendeeDashboard />} />
         <Route path="/organizer/register" element={<OrganizerRegister />} />
         <Route path="/organizer/login" element={<OrganizerLogin />} />
+        <Route path="/events/:id" element={<EventDetail />} />
       </Routes>
     </Router>
   );

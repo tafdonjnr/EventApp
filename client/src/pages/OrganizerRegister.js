@@ -124,8 +124,12 @@ async function handleSubmit(e) {
       password: form.password,
     });
 
+    // Save token and user role
     localStorage.setItem('token', res.data.token);
-    navigate('/organizer-dashboard');
+    localStorage.setItem('userRole', 'organizer');
+    localStorage.setItem('userData', JSON.stringify(res.data.organizer || {}));
+    
+    navigate('/organizer/dashboard');
   } catch (err) {
     setError(err.response?.data?.message || 'Registration failed.');
   }

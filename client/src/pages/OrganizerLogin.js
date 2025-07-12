@@ -108,8 +108,10 @@ export default function OrganizerLogin() {
         return;
       }
 
-      // Save token
+      // Save token and user role
       localStorage.setItem('token', data.token);
+      localStorage.setItem('userRole', 'organizer');
+      localStorage.setItem('userData', JSON.stringify(data.organizer || {}));
 
       // Redirect to organizer dashboard
       navigate('/organizer/dashboard');

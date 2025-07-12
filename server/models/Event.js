@@ -11,9 +11,14 @@ const eventSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-    location: String,
+    venue: String,
     price: Number,
     ticketsAvailable: Number,
+    category: {
+      type: String,
+      default: 'general',
+    },
+    banner: String,
 
     // CHANGE ↓  from String to ObjectId reference
     organizer: {

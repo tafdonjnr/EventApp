@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import EventModal from '../components/EventModal';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const styles = {
@@ -45,13 +44,47 @@ const styles = {
     border: 'none',
     cursor: 'pointer',
   },
+  eventGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '1rem',
+    marginTop: '1rem',
+  },
+  eventCard: {
+    background: '#2b2b3f',
+    borderRadius: '8px',
+    padding: '1rem',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+    border: '1px solid #444',
+  },
+  eventBanner: {
+    width: '100%',
+    height: '150px',
+    objectFit: 'cover',
+    borderRadius: '6px',
+    marginBottom: '1rem',
+  },
+  eventTitle: {
+    fontSize: '1.2rem',
+    fontWeight: 'bold',
+    marginBottom: '0.5rem',
+    color: '#f4a261',
+  },
+  eventInfo: {
+    fontSize: '0.9rem',
+    marginBottom: '0.25rem',
+    color: '#ccc',
+  },
+  buttonGroup: {
+    display: 'flex',
+    gap: '0.5rem',
+    marginTop: '1rem',
+  },
 };
 
 export default function OrganizerDashboard() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShow] = useState(false);
-  const [editEvent, setEdit] = useState(null);
   const [orgName, setOrgName] = useState('');
   const [logo, setLogo] = useState('');
   const [error, setError] = useState('');
@@ -70,7 +103,7 @@ export default function OrganizerDashboard() {
     }
   }, [message]);
 
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -100,11 +133,11 @@ export default function OrganizerDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, navigate]);
 
   useEffect(() => {
     loadEvents();
-  }, []);
+  }, [loadEvents]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this event?')) return;
@@ -162,10 +195,7 @@ export default function OrganizerDashboard() {
 
       <button
         style={styles.button}
-        onClick={() => {
-          setEdit(null);
-          setShow(true);
-        }}
+        onClick={() => navigate('/organizer/create-event')}
       >
         Create New Event
       </button>
@@ -175,46 +205,57 @@ export default function OrganizerDashboard() {
       {events.length === 0 ? (
         <p>You have no events yet. Click "Create New Event" to add one!</p>
       ) : (
-        events.map((ev) => (
-          <div key={ev._id} style={styles.card}>
-            <h3>{ev.title}</h3>
-            <p>{ev.description}</p>
-            <p>
-              <strong>Date:</strong>{' '}
-              {new Date(ev.date).toLocaleString()}
-            </p>
-            <p>
-              <strong>Location:</strong> {ev.location}
-            </p>
-            <button
-              style={{ ...styles.smallBtn, background: '#f4a261' }}
-              onClick={() => {
-                setEdit(ev);
-                setShow(true);
-              }}
-            >
-              Edit
-            </button>
-            <button
-              style={{
-                ...styles.smallBtn,
-                background: '#ff6b6b',
-                color: '#fff',
-              }}
-              onClick={() => handleDelete(ev._id)}
-            >
-              Delete
-            </button>
-          </div>
-        ))
+        <div style={styles.eventGrid}>
+          {events.map((ev) => (
+            <div key={ev._id} style={styles.eventCard}>
+              {ev.banner && (
+                <img
+                  src={`http://localhost:5000${ev.banner}`}
+                  alt={ev.title}
+                  style={styles.eventBanner}
+                />
+              )}
+              <h3 style={styles.eventTitle}>{ev.title}</h3>
+              <p style={styles.eventInfo}>
+                <strong>Date:</strong> {new Date(ev.date).toLocaleDateString()}
+              </p>
+              <p style={styles.eventInfo}>
+                <strong>Time:</strong> {new Date(ev.date).toLocaleTimeString()}
+              </p>
+              <p style={styles.eventInfo}>
+                <strong>Venue:</strong> {ev.venue}
+              </p>
+              <p style={styles.eventInfo}>
+                <strong>Price:</strong> ${ev.price}
+              </p>
+              <p style={styles.eventInfo}>
+                <strong>Tickets:</strong> {ev.ticketsAvailable} available
+              </p>
+              <p style={styles.eventInfo}>
+                <strong>Category:</strong> {ev.category}
+              </p>
+              <div style={styles.buttonGroup}>
+                <button
+                  style={{ ...styles.smallBtn, background: '#f4a261' }}
+                  onClick={() => navigate(`/organizer/edit-event/${ev._id}`)}
+                >
+                  Edit
+                </button>
+                <button
+                  style={{
+                    ...styles.smallBtn,
+                    background: '#ff6b6b',
+                    color: '#fff',
+                  }}
+                  onClick={() => handleDelete(ev._id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
-
-      <EventModal
-        open={showModal}
-        onClose={() => setShow(false)}
-        initial={editEvent || {}}
-        onSaved={loadEvents}
-      />
     </div>
   );
 }

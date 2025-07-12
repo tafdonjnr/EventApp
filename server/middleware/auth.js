@@ -18,7 +18,18 @@ const verifyToken = (req, res, next) => {
       return res.status(403).json({ message: 'Failed to authenticate token' });
     }
     console.log('Decoded token:', decoded);
-    req.organizerId = decoded.id;
+    
+    // Set both organizerId and attendeeId based on role
+    if (decoded.role === 'organizer') {
+      req.organizerId = decoded.id;
+    } else if (decoded.role === 'attendee') {
+      req.attendeeId = decoded.id;
+    }
+    
+    // Also set a generic userId for compatibility
+    req.userId = decoded.id;
+    req.userRole = decoded.role;
+    
     next();
   });
 };

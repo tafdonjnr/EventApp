@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 
 const styles = {
@@ -47,6 +48,18 @@ const styles = {
     marginBottom: '1rem',
     textAlign: 'center',
   },
+  successMsg: {
+    color: '#51cf66',
+    marginBottom: '1rem',
+    textAlign: 'center',
+  },
+  link: {
+    color: '#f4a261',
+    textDecoration: 'none',
+    textAlign: 'center',
+    display: 'block',
+    marginTop: '1rem',
+  },
 };
 
 function InputField({ type = 'text', placeholder, name, value, onChange }) {
@@ -74,8 +87,10 @@ export default function AttendeeLogin() {
     email: '',
     password: '',
   });
-
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -84,17 +99,43 @@ export default function AttendeeLogin() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    // TODO: replace with actual API call
+    setSuccess('');
+    setLoading(true);
+
     if (!form.email || !form.password) {
       setError('Please fill in all fields');
+      setLoading(false);
       return;
     }
+
     try {
-      // simulate login API call
-      console.log('Logging in attendee:', form);
-      // redirect or update auth state here
+      const response = await fetch('/api/attendees/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Login successful! Redirecting...');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userRole', 'attendee');
+        localStorage.setItem('userData', JSON.stringify(data.attendee));
+        
+        setTimeout(() => {
+          navigate('/attendee/dashboard');
+        }, 1500);
+      } else {
+        setError(data.message || 'Login failed');
+      }
     } catch (err) {
-      setError('Login failed. Please check your credentials.');
+      console.error('Login error:', err);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -103,6 +144,7 @@ export default function AttendeeLogin() {
       <h2 style={styles.header}>Attendee Login</h2>
 
       {error && <div style={styles.errorMsg}>{error}</div>}
+      {success && <div style={styles.successMsg}>{success}</div>}
 
       <form onSubmit={handleSubmit} style={styles.form} noValidate>
         <InputField
@@ -122,13 +164,18 @@ export default function AttendeeLogin() {
 
         <button
           type="submit"
+          disabled={loading}
           style={styles.button}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = '#e08a3f')}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = '#f4a261')}
+          onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#e08a3f')}
+          onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#f4a261')}
         >
-          Log In
+          {loading ? 'Logging in...' : 'Log In'}
         </button>
       </form>
+
+      <a href="/attendee/register" style={styles.link}>
+        Don't have an account? Sign up here
+      </a>
     </AuthLayout>
   );
 }

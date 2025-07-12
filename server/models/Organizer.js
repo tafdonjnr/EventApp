@@ -18,6 +18,13 @@ const organizerSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Organization name
+    orgName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
     // Login / contact e-mail (must be unique)
     email: {
       type: String,
@@ -44,6 +51,25 @@ const organizerSchema = new mongoose.Schema(
     avatarUrl: {
       type: String,
       default: '',
+    },
+
+    // Logo image path
+    logo: {
+      type: String,
+      default: '',
+    },
+
+    // Social media links
+    twitter: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
+    instagram: {
+      type: String,
+      default: '',
+      trim: true,
     },
   },
   {
