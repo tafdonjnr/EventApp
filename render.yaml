@@ -2,7 +2,6 @@ services:
   - type: web
     name: eventapp-server
     env: node
-    plan: free
     buildCommand: cd server && npm install
     startCommand: cd server && node index.js
     envVars:
@@ -10,9 +9,9 @@ services:
         value: production
       - key: PAYSTACK_SECRET
         sync: false
+
   - type: web
     name: eventapp-client
     env: static
-    plan: free
     buildCommand: cd client && npm install && npm run build
     staticPublishPath: client/build
