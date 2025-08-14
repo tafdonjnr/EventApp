@@ -2,8 +2,9 @@ services:
   - type: web
     name: eventapp-server
     env: node
-    buildCommand: cd server && npm install
-    startCommand: cd server && node index.js
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -13,5 +14,6 @@ services:
   - type: web
     name: eventapp-client
     env: static
-    buildCommand: cd client && npm install && npm run build
-    staticPublishPath: client/build
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
