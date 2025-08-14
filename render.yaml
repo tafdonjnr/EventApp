@@ -1,16 +1,18 @@
 services:
   - type: web
-    name: eventapp
+    name: eventapp-server
     env: node
     plan: free
-    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
-    startCommand: node index.js
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
-
-databases:
-  - name: eventapp-db
+      - key: PAYSTACK_SECRET
+        sync: false
+  - type: web
+    name: eventapp-client
+    env: static
     plan: free
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/build
