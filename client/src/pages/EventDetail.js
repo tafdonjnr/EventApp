@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getImageUrl } from '../config/api';
+import LoadingState from '../components/LoadingState';
 
 const styles = {
   page: {
-    backgroundColor: '#1e1e2f',
+    backgroundColor: 'var(--bg-primary)',
     minHeight: '100vh',
-    color: '#fff',
+    color: 'var(--text-primary)',
     padding: '2rem',
   },
   container: {
     maxWidth: '1000px',
     margin: '0 auto',
-    background: '#2b2b3f',
+    background: 'var(--bg-secondary)',
     borderRadius: '12px',
     overflow: 'hidden',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+    boxShadow: '0 4px 10px var(--shadow-primary)',
   },
   banner: {
     width: '100%',
@@ -28,11 +30,11 @@ const styles = {
     fontSize: '2.5rem',
     fontWeight: 'bold',
     marginBottom: '1rem',
-    color: '#f4a261',
+    color: 'var(--text-accent)',
   },
   organizer: {
     fontSize: '1.1rem',
-    color: '#ccc',
+    color: 'var(--text-secondary)',
     marginBottom: '2rem',
     fontStyle: 'italic',
   },
@@ -40,7 +42,7 @@ const styles = {
     fontSize: '1.1rem',
     lineHeight: '1.6',
     marginBottom: '2rem',
-    color: '#f4f4f4',
+    color: 'var(--text-primary)',
   },
   infoGrid: {
     display: 'grid',
@@ -49,14 +51,14 @@ const styles = {
     marginBottom: '2rem',
   },
   infoCard: {
-    background: '#1e1e2f',
+    background: 'var(--bg-card)',
     padding: '1.5rem',
     borderRadius: '8px',
-    border: '1px solid #444',
+    border: '1px solid var(--border-primary)',
   },
   infoLabel: {
     fontSize: '0.9rem',
-    color: '#888',
+    color: 'var(--text-muted)',
     marginBottom: '0.5rem',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -64,17 +66,17 @@ const styles = {
   infoValue: {
     fontSize: '1.2rem',
     fontWeight: '600',
-    color: '#f4f4f4',
+    color: 'var(--text-primary)',
   },
   price: {
     fontSize: '2rem',
     fontWeight: 'bold',
-    color: '#51cf66',
+    color: 'var(--text-success)',
   },
   category: {
     display: 'inline-block',
-    background: '#f4a261',
-    color: '#1e1e2f',
+    background: 'var(--text-accent)',
+    color: 'var(--bg-primary)',
     padding: '0.5rem 1rem',
     borderRadius: '20px',
     fontSize: '0.9rem',
@@ -82,9 +84,9 @@ const styles = {
     textTransform: 'uppercase',
   },
   actionSection: {
-    background: '#1e1e2f',
+    background: 'var(--bg-card)',
     padding: '2rem',
-    borderTop: '1px solid #444',
+    borderTop: '1px solid var(--border-primary)',
   },
   ticketInfo: {
     display: 'flex',
@@ -94,160 +96,89 @@ const styles = {
   },
   ticketCount: {
     fontSize: '1.1rem',
-    color: '#ccc',
+    color: 'var(--text-secondary)',
   },
   registerButton: {
-    background: '#51cf66',
-    color: '#fff',
-    padding: '1rem 2rem',
+    background: 'var(--bg-button)',
+    color: 'var(--text-primary)',
     border: 'none',
+    padding: '12px 24px',
     borderRadius: '8px',
     fontSize: '1.1rem',
-    fontWeight: 'bold',
+    fontWeight: '600',
     cursor: 'pointer',
-    transition: 'background-color 0.3s ease',
-    width: '100%',
+    transition: 'background-color 0.25s ease',
+  },
+  registerButtonHover: {
+    background: 'var(--bg-button-hover)',
   },
   registerButtonDisabled: {
-    background: '#666',
-    color: '#ccc',
+    background: 'var(--bg-button-secondary)',
+    color: 'var(--text-muted)',
     cursor: 'not-allowed',
   },
-  registerButtonLoading: {
-    background: '#f4a261',
-    color: '#1e1e2f',
-  },
-  error: {
-    background: '#ff6b6b',
-    color: '#fff',
-    padding: '1rem',
-    borderRadius: '6px',
-    marginBottom: '1rem',
-    textAlign: 'center',
-  },
-  success: {
-    background: '#51cf66',
-    color: '#fff',
-    padding: '1rem',
-    borderRadius: '6px',
-    marginBottom: '1rem',
-    textAlign: 'center',
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '3rem',
-    color: '#f4a261',
-    fontSize: '1.2rem',
-  },
   backButton: {
-    background: '#666',
-    color: '#fff',
-    padding: '0.75rem 1.5rem',
+    background: 'var(--bg-button-secondary)',
+    color: 'var(--text-primary)',
     border: 'none',
+    padding: '10px 20px',
     borderRadius: '6px',
     cursor: 'pointer',
     marginBottom: '1rem',
-    fontSize: '1rem',
+    transition: 'background-color 0.25s ease',
+  },
+  error: {
+    color: 'var(--text-error)',
+    textAlign: 'center',
+    padding: '1rem',
+    backgroundColor: 'var(--bg-card)',
+    borderRadius: '8px',
+    marginBottom: '1rem',
+  },
+  success: {
+    color: 'var(--text-success)',
+    textAlign: 'center',
+    padding: '1rem',
+    backgroundColor: 'var(--bg-card)',
+    borderRadius: '8px',
+    marginBottom: '1rem',
   },
 };
 
 export default function EventDetail() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isRegistered, setIsRegistered] = useState(false);
-  
+  const [message] = useState('');
+  const [isRegistered] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const userRole = localStorage.getItem('userRole');
 
   useEffect(() => {
-    fetchEventDetails();
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/events/${id}`);
+        
+        if (!response.ok) {
+          throw new Error('Event not found');
+        }
+        
+        const data = await response.json();
+        setEvent(data);
+      } catch (err) {
+        console.error('Error fetching event:', err);
+        setError('Failed to load event details.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
   }, [id]);
 
-  const fetchEventDetails = async () => {
-    try {
-      const response = await fetch(`/api/events/${id}`);
-      if (response.ok) {
-        const eventData = await response.json();
-        setEvent(eventData);
-        
-        // Check if user is registered for this event
-        if (token && userRole === 'attendee') {
-          checkRegistrationStatus(eventData._id);
-        }
-      } else {
-        setError('Event not found');
-      }
-    } catch (err) {
-      setError('Failed to load event details');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkRegistrationStatus = async (eventId) => {
-    try {
-      const response = await fetch(`/api/attendees/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const attendeeData = await response.json();
-        const isRegisteredForEvent = attendeeData.registeredEvents?.some(
-          reg => reg.event._id === eventId
-        );
-        setIsRegistered(isRegisteredForEvent);
-      }
-    } catch (err) {
-      console.error('Error checking registration status:', err);
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!token) {
-      navigate('/attendee/login');
-      return;
-    }
-
-    if (userRole !== 'attendee') {
-      setError('Only attendees can register for events');
-      return;
-    }
-
-    setRegistering(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const response = await fetch(`/api/events/${id}/register`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess('Successfully registered for event!');
-        setIsRegistered(true);
-        // Refresh event data to update ticket count
-        fetchEventDetails();
-      } else {
-        setError(data.message || 'Registration failed');
-      }
-    } catch (err) {
-      setError('Network error. Please try again.');
-    } finally {
-      setRegistering(false);
-    }
-  };
-
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -256,17 +187,70 @@ export default function EventDetail() {
   };
 
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
+    return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
+  const handleRegister = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+
+      if (!token) {
+        navigate('/attendee/login');
+        return;
+      }
+
+      // Initiate Paystack payment via backend
+      const initRes = await fetch('/api/payments/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ eventId: id, ticketCount: 1 }),
+      });
+
+      const initData = await initRes.json();
+      if (!initRes.ok) {
+        setError(initData.message || 'Could not start payment');
+        return;
+      }
+
+      // Redirect to Paystack authorization URL
+      if (initData.authorizationUrl) {
+        window.location.href = initData.authorizationUrl;
+      }
+    } catch (err) {
+      setError('Failed to start payment');
+    }
+  };
+
   if (loading) {
     return (
       <div style={styles.page}>
-        <div style={styles.loading}>Loading event details...</div>
+        <LoadingState 
+          message="Loading event details..." 
+          size="large"
+          containerStyle={{ minHeight: '60vh' }}
+        />
+      </div>
+    );
+  }
+
+  if (error && !event) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.error}>{error}</div>
+        <button 
+          style={styles.backButton}
+          onClick={() => navigate('/')}
+          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-button)'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-button-secondary)'}
+        >
+          ← Back to Events
+        </button>
       </div>
     );
   }
@@ -275,26 +259,40 @@ export default function EventDetail() {
     return (
       <div style={styles.page}>
         <div style={styles.error}>Event not found</div>
-        <button style={styles.backButton} onClick={() => navigate('/')}>
-          Back to Home
+        <button 
+          style={styles.backButton}
+          onClick={() => navigate('/')}
+          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-button)'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-button-secondary)'}
+        >
+          ← Back to Events
         </button>
       </div>
     );
   }
 
   const isSoldOut = event.ticketsAvailable <= 0;
+  const userRole = localStorage.getItem('userRole') || sessionStorage.getItem('userRole');
   const canRegister = !isRegistered && !isSoldOut && userRole === 'attendee';
 
   return (
     <div style={styles.page}>
-      <button style={styles.backButton} onClick={() => navigate('/')}>
+      <button 
+        style={styles.backButton} 
+        onClick={() => navigate('/')}
+        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-button)'}
+        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-button-secondary)'}
+      >
         ← Back to Events
       </button>
+
+      {error && <div style={styles.error}>{error}</div>}
+      {message && <div style={styles.success}>{message}</div>}
 
       <div style={styles.container}>
         {event.banner && (
           <img
-            src={`http://localhost:5000${event.banner}`}
+            src={getImageUrl(event.banner)}
             alt={event.title}
             style={styles.banner}
           />
@@ -341,47 +339,36 @@ export default function EventDetail() {
         </div>
 
         <div style={styles.actionSection}>
-          {error && <div style={styles.error}>{error}</div>}
-          {success && <div style={styles.success}>{success}</div>}
-
           <div style={styles.ticketInfo}>
             <div style={styles.ticketCount}>
-              {isSoldOut ? (
-                <span style={{ color: '#ff6b6b' }}>Sold Out</span>
-              ) : (
-                `${event.ticketsAvailable} tickets available`
-              )}
+              {isSoldOut ? 'Sold Out' : `${event.ticketsAvailable} tickets available`}
             </div>
+            {canRegister && (
+              <button
+                style={styles.registerButton}
+                onClick={handleRegister}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-button-hover)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-button)'}
+              >
+                Register for Event
+              </button>
+            )}
+            {isRegistered && (
+              <div style={{ color: 'var(--text-success)', fontWeight: '600' }}>
+                ✓ Registered
+              </div>
+            )}
+            {!userRole && (
+              <button
+                style={styles.registerButton}
+                onClick={() => navigate('/attendee/login')}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-button-hover)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-button)'}
+              >
+                Login to Register
+              </button>
+            )}
           </div>
-
-          {isRegistered ? (
-            <button style={{ ...styles.registerButton, ...styles.registerButtonDisabled }}>
-              Already Registered ✓
-            </button>
-          ) : !token ? (
-            <button 
-              style={styles.registerButton}
-              onClick={() => navigate('/attendee/login')}
-            >
-              Login to Register
-            </button>
-          ) : userRole !== 'attendee' ? (
-            <button style={{ ...styles.registerButton, ...styles.registerButtonDisabled }}>
-              Only attendees can register for events
-            </button>
-          ) : (
-            <button
-              style={{
-                ...styles.registerButton,
-                ...(registering ? styles.registerButtonLoading : {}),
-                ...(isSoldOut ? styles.registerButtonDisabled : {})
-              }}
-              onClick={handleRegister}
-              disabled={registering || isSoldOut}
-            >
-              {registering ? 'Registering...' : isSoldOut ? 'Sold Out' : 'Register for Event'}
-            </button>
-          )}
         </div>
       </div>
     </div>

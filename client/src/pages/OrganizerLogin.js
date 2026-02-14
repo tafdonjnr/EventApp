@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/AuthLayout';
+import { API_BASE_URL } from '../config/api';
 
 const styles = {
   header: {
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: '1.8rem',
     marginBottom: '1.5rem',
     textAlign: 'center',
@@ -20,22 +22,22 @@ const styles = {
     marginBottom: '1.2rem',
     borderRadius: 8,
     border: '2px solid transparent',
-    backgroundColor: '#1e1e2f',
-    color: '#fff',
+    backgroundColor: 'var(--bg-input)',
+    color: 'var(--text-primary)',
     fontSize: '1rem',
     outline: 'none',
     transition: 'border 0.25s ease, box-shadow 0.25s ease',
     fontFamily: 'inherit',
   },
   inputFocus: {
-    borderColor: '#f4a261',
-    boxShadow: '0 0 8px rgba(244,162,97,0.7)',
+    borderColor: 'var(--border-accent)',
+    boxShadow: '0 0 8px var(--shadow-accent)',
   },
   button: {
     width: '100%',
     padding: '12px',
-    backgroundColor: '#f4a261',
-    color: '#1e1e2f',
+    backgroundColor: 'var(--bg-button)',
+    color: 'var(--text-primary)',
     fontWeight: 700,
     border: 'none',
     borderRadius: 8,
@@ -44,9 +46,28 @@ const styles = {
     transition: 'background-color 0.25s ease',
   },
   errorMsg: {
-    color: '#ff6b6b',
+    color: 'var(--text-error)',
     marginBottom: '1rem',
     textAlign: 'center',
+  },
+  checkboxContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '1.2rem',
+    cursor: 'pointer',
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    marginRight: '10px',
+    accentColor: 'var(--text-accent)',
+    cursor: 'pointer',
+  },
+  checkboxLabel: {
+    color: 'var(--text-primary)',
+    fontSize: '0.9rem',
+    cursor: 'pointer',
+    userSelect: 'none',
   },
 };
 
@@ -74,13 +95,19 @@ export default function OrganizerLogin() {
   const [form, setForm] = useState({
     email: '',
     password: '',
+    rememberMe: false,
   });
 
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setForm({ 
+      ...form, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
   }
 
   async function handleSubmit(e) {
@@ -93,12 +120,15 @@ export default function OrganizerLogin() {
     }
 
     try {
-      const response = await fetch('/api/organizers/login', {
+      const response = await fetch(`${API_BASE_URL}/api/organizers/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
       });
 
       const data = await response.json();
@@ -108,10 +138,14 @@ export default function OrganizerLogin() {
         return;
       }
 
-      // Save token and user role
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('userRole', 'organizer');
-      localStorage.setItem('userData', JSON.stringify(data.organizer || {}));
+      // Use AuthContext login function (API returns _id, name, email, role, token)
+      const organizer = data.organizer || {
+        id: data._id,
+        name: data.name,
+        email: data.email,
+        role: data.role || 'organizer',
+      };
+      login(organizer, data.token, data.role || 'organizer', form.rememberMe);
 
       // Redirect to organizer dashboard
       navigate('/organizer/dashboard');
@@ -142,6 +176,20 @@ export default function OrganizerLogin() {
           value={form.password}
           onChange={handleChange}
         />
+
+        <div style={styles.checkboxContainer}>
+          <input
+            type="checkbox"
+            id="rememberMe"
+            name="rememberMe"
+            checked={form.rememberMe}
+            onChange={handleChange}
+            style={styles.checkbox}
+          />
+          <label htmlFor="rememberMe" style={styles.checkboxLabel}>
+            Remember Me
+          </label>
+        </div>
 
         <button
           type="submit"

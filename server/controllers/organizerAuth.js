@@ -1,9 +1,9 @@
 const jwt = require('jsonwebtoken');
 const Organizer = require('../models/Organizer');
 
-// Generate JWT token
-const genToken = (id) =>
-  jwt.sign({ id, role: 'organizer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
+// Generate JWT token (role from DB: 'organizer' or 'admin')
+const genToken = (id, role = 'organizer') =>
+  jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 // REGISTER controller
 exports.register = async (req, res) => {
@@ -23,7 +23,8 @@ exports.register = async (req, res) => {
       name: org.name,
       email: org.email,
       orgName: org.orgName,
-      token: genToken(org._id),
+      role: org.role,
+      token: genToken(org._id, org.role),
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -50,7 +51,8 @@ exports.login = async (req, res) => {
       _id: org._id,
       name: org.name,
       email: org.email,
-      token: genToken(org._id),
+      role: org.role,
+      token: genToken(org._id, org.role),
     });
   } catch (err) {
     console.error('Login error:', err);

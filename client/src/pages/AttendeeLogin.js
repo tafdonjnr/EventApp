@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/AuthLayout';
+import { API_BASE_URL } from '../config/api';
 
 const styles = {
   header: {
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: '1.8rem',
     marginBottom: '1.5rem',
     textAlign: 'center',
@@ -20,23 +22,39 @@ const styles = {
     marginBottom: '1.2rem',
     borderRadius: 8,
     border: '2px solid transparent',
-    backgroundColor: '#1e1e2f',
-    color: '#fff',
+    backgroundColor: 'var(--bg-input)',
+    color: 'var(--text-primary)',
     fontSize: '1rem',
     outline: 'none',
     transition: 'border 0.25s ease, box-shadow 0.25s ease',
     fontFamily: 'inherit',
   },
   inputFocus: {
-    borderColor: '#f4a261',
-    boxShadow: '0 0 8px rgba(244,162,97,0.7)',
+    borderColor: 'var(--border-accent)',
+    boxShadow: '0 0 8px var(--shadow-accent)',
+  },
+  checkboxContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '1.5rem',
+    gap: '0.5rem',
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    accentColor: 'var(--text-accent)',
+  },
+  checkboxLabel: {
+    color: 'var(--text-secondary)',
+    fontSize: '0.9rem',
+    cursor: 'pointer',
   },
   button: {
     width: '100%',
     padding: '12px',
-    backgroundColor: '#f4a261',
-    color: '#1e1e2f',
-    fontWeight: 700,
+    backgroundColor: 'var(--bg-button)',
+    color: 'var(--text-primary)',
+    fontWeight: '700',
     border: 'none',
     borderRadius: 8,
     cursor: 'pointer',
@@ -44,17 +62,17 @@ const styles = {
     transition: 'background-color 0.25s ease',
   },
   errorMsg: {
-    color: '#ff6b6b',
+    color: 'var(--text-error)',
     marginBottom: '1rem',
     textAlign: 'center',
   },
   successMsg: {
-    color: '#51cf66',
+    color: 'var(--text-success)',
     marginBottom: '1rem',
     textAlign: 'center',
   },
   link: {
-    color: '#f4a261',
+    color: 'var(--text-accent)',
     textDecoration: 'none',
     textAlign: 'center',
     display: 'block',
@@ -63,7 +81,7 @@ const styles = {
 };
 
 function InputField({ type = 'text', placeholder, name, value, onChange }) {
-  const [focused, setFocused] = React.useState(false);
+  const [focused, setFocused] = useState(false);
   return (
     <input
       type={type}
@@ -86,53 +104,49 @@ export default function AttendeeLogin() {
   const [form, setForm] = useState({
     email: '',
     password: '',
+    rememberMe: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setLoading(true);
     setError('');
     setSuccess('');
-    setLoading(true);
-
-    if (!form.email || !form.password) {
-      setError('Please fill in all fields');
-      setLoading(false);
-      return;
-    }
 
     try {
-      const response = await fetch('/api/attendees/login', {
+      const response = await fetch(`${API_BASE_URL}/api/attendees/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         setSuccess('Login successful! Redirecting...');
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userRole', 'attendee');
-        localStorage.setItem('userData', JSON.stringify(data.attendee));
-        
+        login(data.attendee, data.token, 'attendee', form.rememberMe);
         setTimeout(() => {
           navigate('/attendee/dashboard');
-        }, 1500);
+        }, 1000);
       } else {
         setError(data.message || 'Login failed');
       }
     } catch (err) {
-      console.error('Login error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -162,12 +176,26 @@ export default function AttendeeLogin() {
           onChange={handleChange}
         />
 
+        <div style={styles.checkboxContainer}>
+          <input
+            type="checkbox"
+            id="rememberMe"
+            name="rememberMe"
+            checked={form.rememberMe}
+            onChange={handleChange}
+            style={styles.checkbox}
+          />
+          <label htmlFor="rememberMe" style={styles.checkboxLabel}>
+            Remember Me
+          </label>
+        </div>
+
         <button
           type="submit"
           disabled={loading}
           style={styles.button}
-          onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#e08a3f')}
-          onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#f4a261')}
+          onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = 'var(--bg-button-hover)')}
+          onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = 'var(--bg-button)')}
         >
           {loading ? 'Logging in...' : 'Log In'}
         </button>
