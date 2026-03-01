@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from '../config/api';
+import LoadingState from '../components/LoadingState';
+import EmptyState, { EmptyStates } from '../components/EmptyState';
 
 function Home() {
   const [events, setEvents] = useState([]);
@@ -46,230 +49,73 @@ function Home() {
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loading}>Loading events...</div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <LoadingState message="Loading events..." size="large" containerStyle={{ minHeight: '60vh' }} />
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.hero}>
-        <h1 style={styles.title}>Welcome to EventVerse</h1>
-        <p style={styles.subtitle}>Discover and register for amazing events</p>
+    <div className="max-w-7xl mx-auto px-4 py-12 sm:py-16 sm:px-6">
+      <div className="text-center mb-12 sm:mb-16 py-8 sm:py-12">
+        <h1 className="heading-1 mb-4">Welcome to EventVerse</h1>
+        <p className="body-text text-mutedText">Discover and register for amazing events</p>
       </div>
 
-      {error && <div style={styles.error}>{error}</div>}
+      {error && (
+        <div className="card-standard mb-8 text-center text-red-600 bg-red-50 border-red-200">
+          {error}
+        </div>
+      )}
 
-      <div style={styles.eventsSection}>
-        <h2 style={styles.sectionTitle}>Upcoming Events</h2>
-        
+      <section className="max-w-7xl mx-auto">
+        <h2 className="heading-2 text-center mb-8 sm:mb-12">Upcoming Events</h2>
+
         {events.length === 0 ? (
-          <div style={styles.emptyState}>
-            <p>No events available at the moment.</p>
-            <p>Check back later for new events!</p>
-          </div>
+          <EmptyState {...EmptyStates.events} />
         ) : (
-          <div style={styles.eventsGrid}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {events.map((event) => (
-              <div key={event._id} style={styles.eventCard}>
+              <article key={event._id} className="card-standard overflow-hidden p-0 flex flex-col">
                 {event.banner && (
                   <img
-                    src={`http://localhost:5000${event.banner}`}
+                    src={getImageUrl(event.banner)}
                     alt={event.title}
-                    style={styles.eventBanner}
+                    className="w-full h-48 sm:h-52 object-cover"
                   />
                 )}
-                
-                <div style={styles.eventContent}>
-                  <h3 style={styles.eventTitle}>{event.title}</h3>
-                  
-                  <div style={styles.eventInfo}>
-                    <p style={styles.eventDate}>
-                      📅 {formatDate(event.date)} at {formatTime(event.date)}
-                    </p>
-                    <p style={styles.eventVenue}>📍 {event.venue}</p>
-                    <p style={styles.eventPrice}>💰 ${event.price}</p>
-                    <p style={styles.eventTickets}>
-                      🎫 {event.ticketsAvailable} tickets available
-                    </p>
-                    <p style={styles.eventCategory}>
-                      🏷️ {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
-                    </p>
+                <div className="p-4 sm:p-5 flex flex-col flex-1">
+                  <h3 className="heading-3 mb-3">{event.title}</h3>
+                  <div className="space-y-1 mb-3">
+                    <p className="small-text">📅 {formatDate(event.date)} at {formatTime(event.date)}</p>
+                    <p className="small-text">📍 {event.venue}</p>
+                    <p className="small-text font-semibold text-green-600">💰 ${event.price}</p>
+                    <p className="small-text">🎫 {event.ticketsAvailable} tickets available</p>
+                    <p className="small-text">🏷️ {event.category?.charAt(0).toUpperCase() + event.category?.slice(1)}</p>
                   </div>
-
-                  <div style={styles.eventDescription}>
-                    {event.description?.length > 100 
-                      ? `${event.description.substring(0, 100)}...` 
-                      : event.description
-                    }
-                  </div>
-
-                  <div style={styles.eventActions}>
+                  <p className="body-text small-text flex-1 mb-4">
+                    {event.description?.length > 100 ? `${event.description.substring(0, 100)}...` : event.description}
+                  </p>
+                  <div className="flex justify-between items-center gap-2 mt-auto">
                     <button
-                      style={styles.viewButton}
+                      type="button"
+                      className="primary-btn"
                       onClick={() => navigate(`/events/${event._id}`)}
                     >
                       View Details
                     </button>
-                    
                     {event.ticketsAvailable <= 0 && (
-                      <span style={styles.soldOut}>Sold Out</span>
+                      <span className="secondary-btn opacity-80 cursor-default">Sold Out</span>
                     )}
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    backgroundColor: '#1e1e2f',
-    color: '#fff',
-    minHeight: '100vh',
-    padding: '2rem',
-  },
-  hero: {
-    textAlign: 'center',
-    marginBottom: '3rem',
-    padding: '3rem 0',
-  },
-  title: {
-    fontSize: '3rem',
-    marginBottom: '1rem',
-    color: '#f4a261',
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: '1.3rem',
-    marginBottom: '2rem',
-    color: '#ccc',
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '3rem',
-    fontSize: '1.2rem',
-    color: '#f4a261',
-  },
-  error: {
-    background: '#ff6b6b',
-    color: '#fff',
-    padding: '1rem',
-    borderRadius: '6px',
-    marginBottom: '2rem',
-    textAlign: 'center',
-  },
-  eventsSection: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-  },
-  sectionTitle: {
-    fontSize: '2rem',
-    marginBottom: '2rem',
-    color: '#f4f4f4',
-    textAlign: 'center',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '3rem',
-    color: '#888',
-    fontSize: '1.1rem',
-  },
-  eventsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-    gap: '2rem',
-  },
-  eventCard: {
-    background: '#2b2b3f',
-    borderRadius: '12px',
-    overflow: 'hidden',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-    cursor: 'pointer',
-  },
-  eventCardHover: {
-    transform: 'translateY(-5px)',
-    boxShadow: '0 8px 20px rgba(0,0,0,0.4)',
-  },
-  eventBanner: {
-    width: '100%',
-    height: '200px',
-    objectFit: 'cover',
-  },
-  eventContent: {
-    padding: '1.5rem',
-  },
-  eventTitle: {
-    fontSize: '1.3rem',
-    fontWeight: 'bold',
-    marginBottom: '1rem',
-    color: '#f4f4f4',
-  },
-  eventInfo: {
-    marginBottom: '1rem',
-  },
-  eventDate: {
-    fontSize: '0.9rem',
-    color: '#f4a261',
-    marginBottom: '0.5rem',
-  },
-  eventVenue: {
-    fontSize: '0.9rem',
-    color: '#ccc',
-    marginBottom: '0.5rem',
-  },
-  eventPrice: {
-    fontSize: '1rem',
-    color: '#51cf66',
-    fontWeight: 'bold',
-    marginBottom: '0.5rem',
-  },
-  eventTickets: {
-    fontSize: '0.9rem',
-    color: '#ccc',
-    marginBottom: '0.5rem',
-  },
-  eventCategory: {
-    fontSize: '0.8rem',
-    color: '#888',
-    marginBottom: '1rem',
-  },
-  eventDescription: {
-    fontSize: '0.9rem',
-    color: '#ccc',
-    lineHeight: '1.4',
-    marginBottom: '1.5rem',
-  },
-  eventActions: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  viewButton: {
-    background: '#f4a261',
-    color: '#1e1e2f',
-    padding: '0.75rem 1.5rem',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-    transition: 'background-color 0.3s ease',
-  },
-  soldOut: {
-    background: '#ff6b6b',
-    color: '#fff',
-    padding: '0.5rem 1rem',
-    borderRadius: '4px',
-    fontSize: '0.8rem',
-    fontWeight: 'bold',
-  },
-};
 
 export default Home;

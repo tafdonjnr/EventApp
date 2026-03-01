@@ -1,111 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/AuthLayout';
 import { API_BASE_URL } from '../config/api';
 
-const styles = {
-  header: {
-    color: 'var(--text-primary)',
-    fontSize: '1.8rem',
-    marginBottom: '1.5rem',
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
-    maxWidth: 400,
-    margin: '0 auto',
-  },
-  input: {
-    width: '100%',
-    padding: '12px 14px',
-    marginBottom: '1.2rem',
-    borderRadius: 8,
-    border: '2px solid transparent',
-    backgroundColor: 'var(--bg-input)',
-    color: 'var(--text-primary)',
-    fontSize: '1rem',
-    outline: 'none',
-    transition: 'border 0.25s ease, box-shadow 0.25s ease',
-    fontFamily: 'inherit',
-  },
-  inputFocus: {
-    borderColor: 'var(--border-accent)',
-    boxShadow: '0 0 8px var(--shadow-accent)',
-  },
-  checkboxContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '1.5rem',
-    gap: '0.5rem',
-  },
-  checkbox: {
-    width: '18px',
-    height: '18px',
-    accentColor: 'var(--text-accent)',
-  },
-  checkboxLabel: {
-    color: 'var(--text-secondary)',
-    fontSize: '0.9rem',
-    cursor: 'pointer',
-  },
-  button: {
-    width: '100%',
-    padding: '12px',
-    backgroundColor: 'var(--bg-button)',
-    color: 'var(--text-primary)',
-    fontWeight: '700',
-    border: 'none',
-    borderRadius: 8,
-    cursor: 'pointer',
-    fontSize: '1.1rem',
-    transition: 'background-color 0.25s ease',
-  },
-  errorMsg: {
-    color: 'var(--text-error)',
-    marginBottom: '1rem',
-    textAlign: 'center',
-  },
-  successMsg: {
-    color: 'var(--text-success)',
-    marginBottom: '1rem',
-    textAlign: 'center',
-  },
-  link: {
-    color: 'var(--text-accent)',
-    textDecoration: 'none',
-    textAlign: 'center',
-    display: 'block',
-    marginTop: '1rem',
-  },
-};
-
-function InputField({ type = 'text', placeholder, name, value, onChange }) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <input
-      type={type}
-      name={name}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      style={{
-        ...styles.input,
-        ...(focused ? styles.inputFocus : {}),
-      }}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      autoComplete="off"
-    />
-  );
-}
-
 export default function AttendeeLogin() {
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-    rememberMe: false,
-  });
+  const [form, setForm] = useState({ email: '', password: '', rememberMe: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -122,27 +22,17 @@ export default function AttendeeLogin() {
     setLoading(true);
     setError('');
     setSuccess('');
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/attendees/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setSuccess('Login successful! Redirecting...');
         login(data.attendee, data.token, 'attendee', form.rememberMe);
-        setTimeout(() => {
-          navigate('/attendee/dashboard');
-        }, 1000);
+        setTimeout(() => navigate('/attendee/dashboard'), 1000);
       } else {
         setError(data.message || 'Login failed');
       }
@@ -155,55 +45,46 @@ export default function AttendeeLogin() {
 
   return (
     <AuthLayout>
-      <h2 style={styles.header}>Attendee Login</h2>
-
-      {error && <div style={styles.errorMsg}>{error}</div>}
-      {success && <div style={styles.successMsg}>{success}</div>}
-
-      <form onSubmit={handleSubmit} style={styles.form} noValidate>
-        <InputField
+      <h2 className="heading-2 text-center mb-6">Attendee Login</h2>
+      {error && <div className="small-text text-red-600 text-center mb-4">{error}</div>}
+      {success && <div className="small-text text-green-600 text-center mb-4">{success}</div>}
+      <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto space-y-4" noValidate>
+        <input
           type="email"
-          placeholder="Email"
           name="email"
+          placeholder="Email"
           value={form.email}
           onChange={handleChange}
+          className="input-standard"
+          autoComplete="email"
         />
-        <InputField
+        <input
           type="password"
-          placeholder="Password"
           name="password"
+          placeholder="Password"
           value={form.password}
           onChange={handleChange}
+          className="input-standard"
+          autoComplete="current-password"
         />
-
-        <div style={styles.checkboxContainer}>
+        <div className="flex items-center gap-2">
           <input
             type="checkbox"
             id="rememberMe"
             name="rememberMe"
             checked={form.rememberMe}
             onChange={handleChange}
-            style={styles.checkbox}
+            className="rounded border-softBorder text-primaryStart focus:ring-primaryStart"
           />
-          <label htmlFor="rememberMe" style={styles.checkboxLabel}>
-            Remember Me
-          </label>
+          <label htmlFor="rememberMe" className="body-text small-text cursor-pointer">Remember Me</label>
         </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={styles.button}
-          onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = 'var(--bg-button-hover)')}
-          onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = 'var(--bg-button)')}
-        >
+        <button type="submit" disabled={loading} className="primary-btn w-full">
           {loading ? 'Logging in...' : 'Log In'}
         </button>
       </form>
-
-      <a href="/attendee/register" style={styles.link}>
+      <Link to="/attendee/register" className="body-text small-text text-center block mt-4 text-primaryStart hover:underline">
         Don't have an account? Sign up here
-      </a>
+      </Link>
     </AuthLayout>
   );
 }

@@ -5,6 +5,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import './styles/theme.css';
+import './styles/globals.css';
 
 import Home from './pages/Home';
 import Register from './pages/Register';
@@ -25,14 +26,7 @@ import AdminRoute from './admin/AdminRoute';
 
 // Loading component while auth is being checked
 const LoadingSpinner = () => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    color: 'var(--text-accent)',
-    fontSize: '1.2rem'
-  }}>
+  <div className="flex justify-center items-center min-h-screen body-text">
     Loading...
   </div>
 );
@@ -49,6 +43,7 @@ const AppContent = () => {
   return (
     <>
       <Navbar />
+      <main className="min-h-screen" style={{ paddingTop: 'var(--navbar-height)' }}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
@@ -105,6 +100,7 @@ const AppContent = () => {
           </AdminRoute>
         } />
       </Routes>
+      </main>
     </>
   );
 };
