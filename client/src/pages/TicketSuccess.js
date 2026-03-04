@@ -14,11 +14,9 @@ const TicketSuccess = () => {
 
   const fetchTicketData = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
-      // First verify the payment
-      const verifyResponse = await fetch(`/api/payments/verify/${ref}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const token = getAuthToken();
+      const verifyResponse = await fetch(`${API_BASE_URL}/api/payments/verify/${ref}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!verifyResponse.ok) {
