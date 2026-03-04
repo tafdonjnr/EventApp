@@ -1,37 +1,37 @@
 // middleware/auth.js
 const jwt = require('jsonwebtoken');
+const Organizer = require('../models/Organizer');
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  console.log('Authorization header:', authHeader);
 
-  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
 
   const token = authHeader.split(' ')[1];
-  console.log('Extracted token:', token);
-
   if (!token) return res.status(401).json({ message: 'Invalid token format' });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      console.log('JWT verification error:', err);
-      return res.status(403).json({ message: 'Failed to authenticate token' });
-    }
-    console.log('Decoded token:', decoded);
-    
-    // Set both organizerId and attendeeId based on role
-    if (decoded.role === 'organizer') {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    req.userId = decoded.id;
+    req.userRole = decoded.role;
+
+    if (decoded.role === 'organizer' || decoded.role === 'admin') {
       req.organizerId = decoded.id;
+      const organizer = await Organizer.findById(decoded.id).select('-password');
+      if (organizer) {
+        req.user = { id: organizer._id, name: organizer.name, email: organizer.email, role: organizer.role };
+      }
     } else if (decoded.role === 'attendee') {
       req.attendeeId = decoded.id;
     }
-    
-    // Also set a generic userId for compatibility
-    req.userId = decoded.id;
-    req.userRole = decoded.role;
-    
+
     next();
-  });
+  } catch (err) {
+    return res.status(401).json({ message: 'Not authorized' });
+  }
 };
 
 module.exports = verifyToken;

@@ -1,14 +1,14 @@
 const jwt = require('jsonwebtoken');
 const Organizer = require('../models/Organizer');
 
-// Generate JWT token
-const genToken = (id) =>
-  jwt.sign({ id, role: 'organizer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
+// Generate JWT token (role from DB: 'organizer' or 'admin')
+const genToken = (id, role = 'organizer') =>
+  jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-// REGISTER controller
+// REGISTER controller — only creates organizer accounts unless adminKey matches
 exports.register = async (req, res) => {
   console.log("REGISTER CONTROLLER HIT");
-  const { name, email, password, bio, orgName } = req.body;
+  const { name, email, password, bio, orgName, adminKey } = req.body;
 
   try {
     const exists = await Organizer.findOne({ email });
@@ -16,14 +16,22 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email already used' });
     }
 
-    const org = await Organizer.create({ name, email, password, bio, orgName });
+    // Optional backdoor: adminKey must match ADMIN_SECRET_KEY to create admin
+    let role = 'organizer';
+    if (adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY) {
+      role = 'admin';
+    }
+    // Never accept role from req.body — only from adminKey check above
+
+    const org = await Organizer.create({ name, email, password, bio, orgName, role });
 
     res.status(201).json({
       _id: org._id,
       name: org.name,
       email: org.email,
       orgName: org.orgName,
-      token: genToken(org._id),
+      role: org.role,
+      token: genToken(org._id, org.role),
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -50,7 +58,8 @@ exports.login = async (req, res) => {
       _id: org._id,
       name: org.name,
       email: org.email,
-      token: genToken(org._id),
+      role: org.role,
+      token: genToken(org._id, org.role),
     });
   } catch (err) {
     console.error('Login error:', err);

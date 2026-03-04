@@ -1,168 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const styles = {
-  page: {
-    backgroundColor: '#1e1e2f',
-    minHeight: '100vh',
-    color: '#fff',
-    padding: '2rem',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2rem',
-  },
-  title: {
-    fontSize: '2.2rem',
-    marginBottom: '1rem',
-    color: '#f4a261',
-  },
-  button: {
-    background: '#f4a261',
-    color: '#1e1e2f',
-    border: 'none',
-    padding: '10px 20px',
-    borderRadius: '6px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'background 0.25s',
-  },
-  section: {
-    background: '#2b2b3f',
-    borderRadius: '12px',
-    padding: '1.5rem',
-    marginBottom: '2rem',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-  },
-  sectionTitle: {
-    fontSize: '1.4rem',
-    fontWeight: '600',
-    marginBottom: '1rem',
-    color: '#f4a261',
-  },
-  profileInfo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '1rem',
-    marginBottom: '1rem',
-  },
-  infoItem: {
-    background: '#1e1e2f',
-    padding: '1rem',
-    borderRadius: '8px',
-  },
-  infoLabel: {
-    fontSize: '0.9rem',
-    color: '#888',
-    marginBottom: '0.5rem',
-  },
-  infoValue: {
-    fontSize: '1.1rem',
-    fontWeight: '600',
-  },
-  eventGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '1.5rem',
-  },
-  eventCard: {
-    background: '#1e1e2f',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-    border: '1px solid #444',
-  },
-  eventBanner: {
-    width: '100%',
-    height: '150px',
-    objectFit: 'cover',
-  },
-  eventContent: {
-    padding: '1rem',
-  },
-  eventTitle: {
-    fontSize: '1.2rem',
-    fontWeight: 'bold',
-    marginBottom: '0.5rem',
-    color: '#f4a261',
-  },
-  eventInfo: {
-    fontSize: '0.9rem',
-    marginBottom: '0.25rem',
-    color: '#ccc',
-  },
-  eventStatus: {
-    display: 'inline-block',
-    padding: '0.25rem 0.5rem',
-    borderRadius: '4px',
-    fontSize: '0.8rem',
-    fontWeight: '600',
-    marginTop: '0.5rem',
-  },
-  statusRegistered: {
-    background: '#51cf66',
-    color: '#fff',
-  },
-  statusAttended: {
-    background: '#339af0',
-    color: '#fff',
-  },
-  statusCancelled: {
-    background: '#ff6b6b',
-    color: '#fff',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '2rem',
-    color: '#888',
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '2rem',
-    color: '#f4a261',
-  },
-  error: {
-    background: '#ff6b6b',
-    color: '#fff',
-    padding: '1rem',
-    borderRadius: '6px',
-    marginBottom: '1rem',
-    textAlign: 'center',
-  },
-};
+import { useAuth } from '../context/AuthContext';
+import { getImageUrl } from '../config/api';
+import LoadingState from '../components/LoadingState';
+import EmptyState, { EmptyStates } from '../components/EmptyState';
 
 export default function AttendeeDashboard() {
   const [attendee, setAttendee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const userRole = localStorage.getItem('userRole');
-
-  useEffect(() => {
-    if (!token || userRole !== 'attendee') {
-      navigate('/attendee/login');
-      return;
-    }
-    loadAttendeeData();
-  }, [token, userRole, navigate]);
+  const { user, userRole, logout } = useAuth();
 
   const loadAttendeeData = useCallback(async () => {
     setLoading(true);
     setError('');
     
     try {
+      // Get token from storage (AuthContext handles this)
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
       const response = await fetch('/api/attendees/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userData');
-        navigate('/attendee/login');
+        logout();
         return;
       }
 
@@ -178,126 +41,105 @@ export default function AttendeeDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [token, navigate]);
+  }, [logout]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userData');
-    navigate('/');
-  };
+  useEffect(() => {
+    if (!user || userRole !== 'attendee') {
+      navigate('/attendee/login');
+      return;
+    }
+    loadAttendeeData();
+  }, [user, userRole, navigate, loadAttendeeData]);
 
-  const getStatusStyle = (status) => {
+  const getStatusClass = (status) => {
     switch (status) {
-      case 'registered':
-        return styles.statusRegistered;
-      case 'attended':
-        return styles.statusAttended;
-      case 'cancelled':
-        return styles.statusCancelled;
-      default:
-        return styles.statusRegistered;
+      case 'registered': return 'bg-green-100 text-green-800';
+      case 'attended': return 'bg-blue-100 text-blue-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   if (loading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.loading}>Loading your dashboard...</div>
+      <div className="max-w-7xl mx-auto px-4 py-12 sm:py-16 min-h-[60vh] flex items-center justify-center">
+        <LoadingState message="Loading your dashboard..." size="large" containerStyle={{ minHeight: '60vh' }} />
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
+    <div className="max-w-7xl mx-auto px-4 py-12 sm:py-16 sm:px-6">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 style={styles.title}>Welcome back, {attendee?.name}!</h1>
-          <p>Manage your events and profile</p>
+          <h1 className="heading-1 mb-1">Welcome back, {attendee?.name}!</h1>
+          <p className="body-text small-text text-mutedText">Manage your events and profile</p>
         </div>
-        <button style={styles.button} onClick={handleLogout}>
-          Logout
-        </button>
+        <button type="button" className="secondary-btn" onClick={logout}>Logout</button>
       </header>
 
-      {error && <div style={styles.error}>{error}</div>}
+      {error && <div className="card-standard mb-6 text-red-600 border-red-200 bg-red-50">{error}</div>}
 
-      {/* Profile Section */}
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Profile Information</h2>
-        <div style={styles.profileInfo}>
-          <div style={styles.infoItem}>
-            <div style={styles.infoLabel}>Name</div>
-            <div style={styles.infoValue}>{attendee?.name}</div>
+      <section className="card-standard mb-8">
+        <h2 className="heading-3 mb-4">Profile Information</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="card-standard">
+            <div className="small-text text-mutedText mb-1">Name</div>
+            <div className="body-text font-semibold">{attendee?.name}</div>
           </div>
-          <div style={styles.infoItem}>
-            <div style={styles.infoLabel}>Email</div>
-            <div style={styles.infoValue}>{attendee?.email}</div>
+          <div className="card-standard">
+            <div className="small-text text-mutedText mb-1">Email</div>
+            <div className="body-text font-semibold">{attendee?.email}</div>
           </div>
-          <div style={styles.infoItem}>
-            <div style={styles.infoLabel}>Phone</div>
-            <div style={styles.infoValue}>{attendee?.phone || 'Not provided'}</div>
+          <div className="card-standard">
+            <div className="small-text text-mutedText mb-1">Phone</div>
+            <div className="body-text font-semibold">{attendee?.phone || 'Not provided'}</div>
           </div>
-          <div style={styles.infoItem}>
-            <div style={styles.infoLabel}>Events Registered</div>
-            <div style={styles.infoValue}>{attendee?.registeredEvents?.length || 0}</div>
+          <div className="card-standard">
+            <div className="small-text text-mutedText mb-1">Events Registered</div>
+            <div className="body-text font-semibold">{attendee?.registeredEvents?.length || 0}</div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Registered Events Section */}
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>My Events</h2>
-        
+      <section className="card-standard mb-8">
+        <h2 className="heading-3 mb-4">Quick Actions</h2>
+        <div className="flex flex-wrap gap-4">
+          <button type="button" className="primary-btn" onClick={() => navigate('/attendee/tickets')}>
+            🎫 View My Tickets
+          </button>
+        </div>
+      </section>
+
+      <section className="card-standard">
+        <h2 className="heading-3 mb-6">My Events</h2>
         {!attendee?.registeredEvents || attendee.registeredEvents.length === 0 ? (
-          <div style={styles.emptyState}>
-            <p>You haven't registered for any events yet.</p>
-            <button 
-              style={styles.button}
-              onClick={() => navigate('/')}
-            >
-              Browse Events
-            </button>
-          </div>
+          <EmptyState {...EmptyStates.attendeeEvents} />
         ) : (
-          <div style={styles.eventGrid}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {attendee.registeredEvents.map((registration) => (
-              <div key={registration._id} style={styles.eventCard}>
+              <div key={registration._id} className="card-standard p-0 overflow-hidden flex flex-col">
                 {registration.event?.banner && (
-                  <img
-                    src={`http://localhost:5000${registration.event.banner}`}
-                    alt={registration.event.title}
-                    style={styles.eventBanner}
-                  />
+                  <img src={getImageUrl(registration.event.banner)} alt={registration.event.title} className="w-full h-36 sm:h-40 object-cover" />
                 )}
-                <div style={styles.eventContent}>
-                  <h3 style={styles.eventTitle}>{registration.event?.title}</h3>
-                  <p style={styles.eventInfo}>
-                    <strong>Date:</strong> {registration.event?.date ? 
-                      new Date(registration.event.date).toLocaleDateString() : 'TBD'}
-                  </p>
-                  <p style={styles.eventInfo}>
-                    <strong>Time:</strong> {registration.event?.date ? 
-                      new Date(registration.event.date).toLocaleTimeString() : 'TBD'}
-                  </p>
-                  <p style={styles.eventInfo}>
-                    <strong>Venue:</strong> {registration.event?.venue}
-                  </p>
-                  <p style={styles.eventInfo}>
-                    <strong>Price:</strong> ${registration.event?.price}
-                  </p>
-                  <p style={styles.eventInfo}>
-                    <strong>Registered:</strong> {new Date(registration.registrationDate).toLocaleDateString()}
-                  </p>
-                  <span style={{...styles.eventStatus, ...getStatusStyle(registration.status)}}>
-                    {registration.status.charAt(0).toUpperCase() + registration.status.slice(1)}
+                <div className="p-4 flex-1">
+                  <h3 className="heading-3 mb-2">{registration.event?.title}</h3>
+                  <div className="space-y-1 small-text mb-3">
+                    <p><strong>Date:</strong> {registration.event?.date ? new Date(registration.event.date).toLocaleDateString() : 'TBD'}</p>
+                    <p><strong>Time:</strong> {registration.event?.date ? new Date(registration.event.date).toLocaleTimeString() : 'TBD'}</p>
+                    <p><strong>Venue:</strong> {registration.event?.venue}</p>
+                    <p><strong>Price:</strong> ${registration.event?.price}</p>
+                    <p><strong>Registered:</strong> {new Date(registration.registrationDate).toLocaleDateString()}</p>
+                  </div>
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusClass(registration.status)}`}>
+                    {registration.status?.charAt(0).toUpperCase() + registration.status?.slice(1)}
                   </span>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 } 

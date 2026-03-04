@@ -11,6 +11,12 @@ const bcrypt   = require('bcryptjs');
 /* -----------------------------  Schema  ----------------------------- */
 const organizerSchema = new mongoose.Schema(
   {
+    // Role of admin or organizer
+    role: {
+      type: String,
+      enum: ['organizer', 'admin'],
+      default: 'organizer'
+    },
     // Display name shown on public profile
     name: {
       type: String,
