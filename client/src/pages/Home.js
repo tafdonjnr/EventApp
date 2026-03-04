@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getImageUrl } from '../config/api';
+import { getImageUrl, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
 import EmptyState, { EmptyStates } from '../components/EmptyState';
 
@@ -16,7 +16,7 @@ function Home() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events');
+      const response = await fetch(`${API_BASE_URL}/api/events`);
       if (response.ok) {
         const data = await response.json();
         setEvents(data);

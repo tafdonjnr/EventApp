@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LoadingState from '../components/LoadingState';
+import { API_BASE_URL, getAuthToken } from '../config/api';
 
 const TicketSuccess = () => {
   const { ref } = useParams();
@@ -31,8 +32,8 @@ const TicketSuccess = () => {
       }
 
       // Get the ticket details
-      const ticketResponse = await fetch('/api/tickets/my-tickets', {
-        headers: { Authorization: `Bearer ${token}` }
+      const ticketResponse = await fetch(`${API_BASE_URL}/api/tickets/my-tickets`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!ticketResponse.ok) {

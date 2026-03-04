@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getImageUrl } from '../config/api';
+import { getImageUrl, API_BASE_URL, getAuthToken } from '../config/api';
 import LoadingState from '../components/LoadingState';
 import EmptyState, { EmptyStates } from '../components/EmptyState';
 
@@ -17,11 +17,12 @@ export default function AttendeeDashboard() {
     setError('');
     
     try {
-      // Get token from storage (AuthContext handles this)
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
-      const response = await fetch('/api/attendees/profile', {
-        headers: { Authorization: `Bearer ${token}` },
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/api/attendees/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.status === 401 || response.status === 403) {

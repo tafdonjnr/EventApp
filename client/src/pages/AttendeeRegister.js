@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import { API_BASE_URL } from '../config/api';
 
 export default function AttendeeRegister() {
   const [form, setForm] = useState({
@@ -35,7 +36,7 @@ export default function AttendeeRegister() {
       return;
     }
     try {
-      const response = await fetch('/api/attendees/register', {
+      const response = await fetch(`${API_BASE_URL}/api/attendees/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

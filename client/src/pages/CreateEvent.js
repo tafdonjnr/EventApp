@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getImageUrl, getAuthToken } from '../config/api';
+import { getImageUrl, getAuthToken, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
 
 export default function CreateEvent() {
@@ -28,7 +28,7 @@ export default function CreateEvent() {
 
   const fetchEventData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/events/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/events/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -96,7 +96,7 @@ export default function CreateEvent() {
       formPayload.append('category', formData.category);
       if (bannerFile) formPayload.append('banner', bannerFile);
 
-      const url = isEdit ? `/api/events/${id}` : '/api/events';
+      const url = isEdit ? `${API_BASE_URL}/api/events/${id}` : `${API_BASE_URL}/api/events`;
       const method = isEdit ? 'PUT' : 'POST';
       const response = await fetch(url, {
         method,

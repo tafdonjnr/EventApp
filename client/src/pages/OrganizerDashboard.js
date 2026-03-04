@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getImageUrl } from '../config/api';
+import { getImageUrl, API_BASE_URL, getAuthToken } from '../config/api';
 import LoadingState from '../components/LoadingState';
 import EmptyState, { EmptyStates } from '../components/EmptyState';
 
@@ -33,8 +33,8 @@ export default function OrganizerDashboard() {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const res = await fetch('/api/events', {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/api/events`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401 || res.status === 403) {
@@ -64,8 +64,8 @@ export default function OrganizerDashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this event?')) return;
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const res = await fetch(`/api/events/${id}`, {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/api/events/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

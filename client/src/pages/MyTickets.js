@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import LoadingState from '../components/LoadingState';
+import { API_BASE_URL, getAuthToken } from '../config/api';
 
 export default function MyTickets() {
   const { user, userRole } = useAuth();
@@ -12,8 +13,8 @@ export default function MyTickets() {
 
   const fetchTickets = async () => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await fetch('/api/tickets/my-tickets', {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/api/tickets/my-tickets`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Failed to fetch tickets');

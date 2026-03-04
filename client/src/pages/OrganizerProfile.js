@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getImageUrl, getAuthToken } from '../config/api';
+import { getImageUrl, getAuthToken, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
 
 // Inline styles for consistent UI
@@ -139,8 +139,11 @@ export default function OrganizerProfile() {
       }
 
       try {
-        const res = await fetch('/api/organizers/dashboard', {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch(`${API_BASE_URL}/api/organizers/dashboard`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         });
 
         if (res.status === 401 || res.status === 403) {
@@ -224,7 +227,7 @@ export default function OrganizerProfile() {
         formPayload.append('logo', logoFile);
       }
 
-      const response = await fetch('/api/organizers/profile', {
+      const response = await fetch(`${API_BASE_URL}/api/organizers/profile`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
         body: formPayload,

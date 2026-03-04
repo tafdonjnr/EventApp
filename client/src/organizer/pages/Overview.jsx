@@ -11,8 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import LoadingState from '../../components/LoadingState';
-
-const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+import { API_BASE_URL, getAuthToken } from '../../config/api';
 
 const Overview = () => {
   const navigate = useNavigate();
@@ -31,9 +30,12 @@ const Overview = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const token = getToken();
-        const res = await fetch('/api/organizers/analytics', {
-          headers: { Authorization: `Bearer ${token}` },
+        const token = getAuthToken();
+        const res = await fetch(`${API_BASE_URL}/api/organizers/analytics`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         });
         if (!res.ok) throw new Error('Failed to load analytics');
         const data = await res.json();

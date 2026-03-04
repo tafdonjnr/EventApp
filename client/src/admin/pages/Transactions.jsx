@@ -42,14 +42,10 @@ const Transactions = () => {
 
   const handleTransactionAction = async (transactionId, action) => {
     try {
-      const response = await fetch(`/api/admin/transactions/${transactionId}/${action}`, {
+      const response = await adminFetch(`/api/admin/transactions/${transactionId}/${action}`, {
         method: 'POST',
       });
-      
-      if (response.ok) {
-        // Refresh transactions list
-        fetchTransactions();
-      }
+      if (response.ok) fetchTransactions();
     } catch (error) {
       console.error(`Error ${action} transaction:`, error);
     }

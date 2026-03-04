@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import LoadingState from './LoadingState';
 import EmptyState, { EmptyStates } from './EmptyState';
+import { API_BASE_URL } from '../config/api';
 
 function EventList() {
   const [events, setEvents] = useState([]);
@@ -11,7 +12,7 @@ function EventList() {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/events');
+        const response = await fetch(`${API_BASE_URL}/api/events`);
         if (!response.ok) throw new Error('Failed to load events');
         const data = await response.json();
         setEvents(data);

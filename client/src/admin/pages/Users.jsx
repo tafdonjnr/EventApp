@@ -39,14 +39,10 @@ const Users = () => {
 
   const handleUserAction = async (userId, action) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/${action}`, {
+      const response = await adminFetch(`/api/admin/users/${userId}/${action}`, {
         method: 'POST',
       });
-      
-      if (response.ok) {
-        // Refresh users list
-        fetchUsers();
-      }
+      if (response.ok) fetchUsers();
     } catch (error) {
       console.error(`Error ${action} user:`, error);
     }

@@ -39,14 +39,10 @@ const Events = () => {
 
   const handleEventAction = async (eventId, action) => {
     try {
-      const response = await fetch(`/api/admin/events/${eventId}/${action}`, {
+      const response = await adminFetch(`/api/admin/events/${eventId}/${action}`, {
         method: 'POST',
       });
-      
-      if (response.ok) {
-        // Refresh events list
-        fetchEvents();
-      }
+      if (response.ok) fetchEvents();
     } catch (error) {
       console.error(`Error ${action} event:`, error);
     }

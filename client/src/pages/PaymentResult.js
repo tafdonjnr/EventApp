@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
@@ -11,7 +12,7 @@ export default function PaymentResult() {
   useEffect(() => {
     async function verify() {
       try {
-        const res = await fetch(`/api/payments/verify/${reference}`);
+        const res = await fetch(`${API_BASE_URL}/api/payments/verify/${reference}`);
         if (!res.ok) throw new Error('Verification failed');
         const data = await res.json();
         setStatus(data.status);

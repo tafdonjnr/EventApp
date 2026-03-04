@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config/api';
 
 export default function OrganizerRegister() {
   const [form, setForm] = useState({
@@ -31,7 +32,7 @@ export default function OrganizerRegister() {
       return;
     }
     try {
-      const response = await fetch('/api/organizers/register', {
+      const response = await fetch(`${API_BASE_URL}/api/organizers/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

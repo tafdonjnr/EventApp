@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getImageUrl } from '../config/api';
+import { getImageUrl, API_BASE_URL, getAuthToken } from '../config/api';
 import LoadingState from '../components/LoadingState';
 
 export default function EventDetail() {
@@ -16,7 +16,7 @@ export default function EventDetail() {
     const fetchEvent = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/events/${id}`);
+        const response = await fetch(`${API_BASE_URL}/api/events/${id}`);
         
         if (!response.ok) {
           throw new Error('Event not found');
@@ -53,15 +53,13 @@ export default function EventDetail() {
 
   const handleRegister = async () => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-
+      const token = getAuthToken();
       if (!token) {
         navigate('/attendee/login');
         return;
       }
 
-      // Initiate Paystack payment via backend
-      const initRes = await fetch('/api/payments/initiate', {
+      const initRes = await fetch(`${API_BASE_URL}/api/payments/initiate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
