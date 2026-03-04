@@ -43,7 +43,7 @@ export default function Navbar() {
 
   const handleCreate = () => {
     if (user && userRole === 'organizer') {
-      navigate('/organizer/create-event');
+      navigate('/dashboard/create');
     } else if (user && userRole === 'attendee') {
       navigate('/attendee/dashboard');
     } else {
@@ -54,7 +54,7 @@ export default function Navbar() {
 
   const handleDashboard = () => {
     if (userRole === 'organizer') {
-      navigate('/organizer/dashboard');
+      navigate('/dashboard');
     } else if (userRole === 'attendee') {
       navigate('/attendee/dashboard');
     }
@@ -277,7 +277,7 @@ function NavLinks({ user, userRole, onCreate, onDashboard, onLogout, mobile, onN
         <>
           {userRole === 'organizer' && (
             <>
-              <Link to="/organizer/profile" className={linkClass} onClick={onNavigate}>My Profile</Link>
+              <Link to="/dashboard/profile" className={linkClass} onClick={onNavigate}>My Profile</Link>
               <button type="button" onClick={onDashboard} className={btnClass}>Dashboard</button>
               <button type="button" onClick={onCreate} className={btnClass}>Create Event</button>
             </>

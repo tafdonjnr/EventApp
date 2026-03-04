@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/auth');
 const adminMiddlewareModule = require('../middleware/adminMiddleware');
 
@@ -20,7 +21,43 @@ const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
 const Transaction = require('../models/Transaction');
 
-// All admin routes: verifyToken → adminMiddleware → handler
+// Admin login (public) — only admins can log in here; organizers get 403
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password required' });
+    }
+    const org = await Organizer.findOne({ email });
+    if (!org) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    const isMatch = await org.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    if (org.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    const token = jwt.sign(
+      { id: org._id, role: org.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({
+      _id: org._id,
+      name: org.name,
+      email: org.email,
+      role: org.role,
+      token,
+    });
+  } catch (err) {
+    console.error('Admin login error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// All admin routes below: verifyToken → adminMiddleware → handler
 router.get('/stats', verifyToken, adminMiddleware, async (req, res) => {
     try {
       const totalOrganizers = await Organizer.countDocuments();

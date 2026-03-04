@@ -44,8 +44,10 @@ export default function OrganizerRegister() {
       });
       const data = await response.json();
       if (response.ok) {
-        login(data, data.token, 'organizer', true);
-        navigate('/organizer/dashboard');
+        const role = data.role || 'organizer';
+        const userData = { id: data._id, name: data.name, email: data.email, orgName: data.orgName, role };
+        login(userData, data.token, role, true);
+        navigate(role === 'admin' ? '/admin' : '/dashboard');
       } else {
         setError(data.message || 'Registration failed.');
       }

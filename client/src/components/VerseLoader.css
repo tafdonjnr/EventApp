@@ -4,7 +4,7 @@
   margin-bottom: 1.5rem;
   font-size: 2.7rem;
   font-weight: 700;
-  color: #f4a261;          /* your highlight orange */
+  color: var(--text-accent);          /* your highlight orange */
 }
 
 .verse-letter {

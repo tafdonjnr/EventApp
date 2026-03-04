@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getImageUrl } from '../config/api';
+import { getImageUrl, getAuthToken } from '../config/api';
 import LoadingState from '../components/LoadingState';
 
 export default function CreateEvent() {
@@ -24,7 +24,7 @@ export default function CreateEvent() {
 
   const navigate = useNavigate();
   const { id } = useParams();
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
 
   const fetchEventData = useCallback(async () => {
     try {
@@ -107,7 +107,7 @@ export default function CreateEvent() {
 
       if (response.ok) {
         setSuccess(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
-        setTimeout(() => navigate('/organizer/dashboard'), 2000);
+        setTimeout(() => navigate('/dashboard/events'), 2000);
       } else {
         setError(data.message || 'Failed to save event');
       }
@@ -283,7 +283,7 @@ export default function CreateEvent() {
             </button>
             <button
               type="button"
-              onClick={() => navigate('/organizer/dashboard')}
+              onClick={() => navigate('/dashboard')}
               className="secondary-btn w-full sm:w-auto"
             >
               Cancel

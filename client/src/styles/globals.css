@@ -1,0 +1,55 @@
+/**
+ * Design system – reusable component classes
+ * Uses Tailwind theme from tailwind.config.js (primaryStart, primaryEnd, primaryText, mutedText, softBorder, primaryGradient, rounded-xl, section)
+ */
+
+/* Buttons */
+.primary-btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-primaryText bg-primaryGradient border border-softBorder shadow-sm;
+  @apply hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-2;
+}
+
+.secondary-btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-primaryText bg-white/90 border border-softBorder;
+  @apply hover:bg-white focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-2;
+}
+
+/* Cards */
+.card-standard {
+  @apply rounded-xl border border-softBorder bg-white shadow-sm p-4 sm:p-6;
+}
+
+/* Form inputs */
+.input-standard {
+  @apply w-full px-4 py-2 rounded-xl border border-softBorder text-primaryText bg-white;
+  @apply focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-0 focus:border-primaryStart;
+}
+
+textarea.input-standard {
+  @apply min-h-[5rem] resize-y;
+}
+
+select.input-standard {
+  @apply appearance-none cursor-pointer;
+}
+
+/* Typography */
+.heading-1 {
+  @apply text-2xl sm:text-3xl lg:text-4xl font-bold text-primaryText;
+}
+
+.heading-2 {
+  @apply text-xl sm:text-2xl font-bold text-primaryText;
+}
+
+.heading-3 {
+  @apply text-lg sm:text-xl font-semibold text-primaryText;
+}
+
+.body-text {
+  @apply text-base text-primaryText;
+}
+
+.small-text {
+  @apply text-sm text-mutedText;
+}

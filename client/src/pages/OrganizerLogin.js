@@ -43,8 +43,9 @@ export default function OrganizerLogin() {
         email: data.email,
         role: data.role || 'organizer',
       };
-      login(organizer, data.token, data.role || 'organizer', form.rememberMe);
-      navigate('/organizer/dashboard');
+      const role = data.role || 'organizer';
+      login(organizer, data.token, role, form.rememberMe);
+      navigate(role === 'admin' ? '/admin' : '/dashboard');
     } catch (err) {
       setError('Network error. Please try again.');
     }

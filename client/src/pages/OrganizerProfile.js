@@ -1,48 +1,50 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { getImageUrl, getAuthToken } from '../config/api';
+import LoadingState from '../components/LoadingState';
 
 // Inline styles for consistent UI
 const styles = {
   page: {
-    backgroundColor: '#1e1e2f',
+    backgroundColor: 'var(--bg-primary)',
     minHeight: '100vh',
-    color: '#fff',
+    color: 'var(--text-primary)',
     padding: '2rem',
     display: 'flex',
     justifyContent: 'center',
   },
   container: {
-    background: '#2b2b3f',
+    background: 'var(--bg-secondary)',
     borderRadius: '12px',
     padding: '2rem',
     maxWidth: '600px',
     width: '100%',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+    boxShadow: '0 4px 10px var(--shadow-primary)',
   },
   heading: {
     fontSize: '2rem',
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: '2rem',
+    color: 'var(--text-accent)',
   },
   profileImage: {
     width: '120px',
     height: '120px',
     objectFit: 'cover',
     borderRadius: '50%',
-    border: '3px solid #f4a261',
+    border: '3px solid var(--border-accent)',
     display: 'block',
     margin: '0 auto 1.5rem',
   },
   field: {
     fontWeight: '600',
-    color: '#f4f4f4',
+    color: 'var(--text-secondary)',
     marginTop: '1.2rem',
   },
   value: {
     fontWeight: 'bold',
-    color: '#e0e0e0',
+    color: 'var(--text-primary)',
     fontSize: '1.05rem',
     marginBottom: '1rem',
   },
@@ -50,15 +52,15 @@ const styles = {
     width: '100%',
     padding: '0.6rem',
     borderRadius: '6px',
-    background: '#1e1e2f',
-    color: '#fff',
-    border: '1px solid #555',
+    background: 'var(--bg-input)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-primary)',
     marginBottom: '1rem',
   },
   button: {
     width: '100%',
-    background: '#f4a261',
-    color: '#1e1e2f',
+    background: 'var(--bg-button)',
+    color: 'var(--text-primary)',
     padding: '10px',
     border: 'none',
     borderRadius: '8px',
@@ -68,7 +70,7 @@ const styles = {
     transition: '0.3s',
   },
   buttonHover: {
-    background: '#e07a3f',
+    background: 'var(--bg-button-hover)',
   },
   btnGroup: {
     display: 'flex',
@@ -77,10 +79,10 @@ const styles = {
   },
   saveBtn: {
     flex: 1,
-    background: '#2a9d8f',
+    background: 'var(--bg-button-success)',
     padding: '10px',
     border: 'none',
-    color: '#fff',
+    color: 'var(--text-primary)',
     borderRadius: '8px',
     fontWeight: 'bold',
     cursor: 'pointer',
@@ -88,22 +90,21 @@ const styles = {
   },
   cancelBtn: {
     flex: 1,
-    background: '#aaa',
+    background: 'var(--bg-button-secondary)',
     padding: '10px',
     border: 'none',
-    color: '#1e1e2f',
+    color: 'var(--text-accent)',
     borderRadius: '8px',
     fontWeight: 'bold',
     cursor: 'pointer',
   },
   error: {
-    color: '#ff6b6b',
+    color: 'var(--text-error)',
     textAlign: 'center',
     marginTop: '1rem',
-  },
-  loading: {
-    textAlign: 'center',
-    marginTop: '2rem',
+    padding: '1rem',
+    backgroundColor: 'var(--bg-card)',
+    borderRadius: '8px',
   },
 };
 
@@ -125,20 +126,32 @@ export default function OrganizerProfile() {
     instagram: '',
   });
 
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const navigate = useNavigate();
 
   // 🟢 Fetch organizer profile when component mounts
   useEffect(() => {
     const fetchOrganizer = async () => {
+      // If there is no token at all, send user to organizer login
+      if (!token) {
+        navigate('/organizer/login');
+        return;
+      }
+
       try {
         const res = await fetch('/api/organizers/dashboard', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (res.status === 401 || res.status === 403) {
+          // Token invalid or expired: clear auth and send to organizer login
           localStorage.removeItem('token');
-          navigate('/');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userData');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('userRole');
+          sessionStorage.removeItem('userData');
+          navigate('/organizer/login');
           return;
         }
 
@@ -245,8 +258,38 @@ export default function OrganizerProfile() {
     }
   };
 
-  if (loading) return <p style={styles.loading}>Loading...</p>;
-  if (error) return <p style={styles.error}>{error}</p>;
+  if (loading) {
+    return (
+      <div style={styles.page}>
+        <LoadingState 
+          message="Loading your profile..." 
+          size="large"
+          containerStyle={{ minHeight: '60vh' }}
+        />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.error}>{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Safety guard: if organizer data is missing, avoid accessing properties on null
+  if (!organizer) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.error}>Profile data is not available. Please try again.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
@@ -258,15 +301,15 @@ export default function OrganizerProfile() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '1.5rem' }}>
               {formData.logo ? (
                 <img
-                  src={formData.logo.startsWith('blob:') ? formData.logo : `http://localhost:5000${formData.logo}`}
+                  src={getImageUrl(formData.logo)}
                   alt="Organizer Logo"
                   style={{
                     width: '120px',
                     height: '120px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '3px solid #f4a261',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                    border: '3px solid var(--border-accent)',
+                    boxShadow: '0 4px 8px var(--shadow-primary)'
                   }}
                 />
               ) : (
@@ -274,13 +317,13 @@ export default function OrganizerProfile() {
                   width: '120px',
                   height: '120px',
                   borderRadius: '50%',
-                  backgroundColor: '#444',
+                  backgroundColor: 'var(--bg-tertiary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '3px solid #f4a261',
+                  border: '3px solid var(--border-accent)',
                   fontSize: '3rem',
-                  color: '#888'
+                  color: 'var(--text-muted)'
                 }}>
                   <i className="fas fa-user" />
                 </div>
@@ -332,7 +375,7 @@ export default function OrganizerProfile() {
 
             {/* Logo Upload */}
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#f4f4f4', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
                 Logo Image:
               </label>
               <input
@@ -355,8 +398,8 @@ export default function OrganizerProfile() {
                     height: '100px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '2px solid #f4a261',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                    border: '2px solid var(--border-accent)',
+                    boxShadow: '0 2px 6px var(--shadow-primary)'
                   }} 
                 />
               </div>
