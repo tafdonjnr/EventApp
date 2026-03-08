@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl, getAuthToken, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
+import Stepper, { Step } from '../components/Stepper';
 
 export default function CreateEvent() {
   const [formData, setFormData] = useState({
@@ -80,8 +81,7 @@ export default function CreateEvent() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const saveEvent = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
@@ -138,158 +138,185 @@ export default function CreateEvent() {
       )}
 
       <div className="card-standard max-w-3xl mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block body-text font-semibold text-primaryText mb-2">Event Title *</label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              required
-              placeholder="Enter event title"
-              className="input-standard"
-            />
-          </div>
+        <Stepper
+          initialStep={1}
+          onStepChange={() => {}}
+          onFinalStepCompleted={saveEvent}
+          backButtonText="Previous"
+          nextButtonText="Next"
+        >
+          <Step>
+            <div className="space-y-6">
+              <div>
+                <label className="block body-text font-semibold text-primaryText mb-2">Event Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Enter event title"
+                  className="input-standard"
+                />
+              </div>
 
-          <div>
-            <label className="block body-text font-semibold text-primaryText mb-2">Description *</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              required
-              placeholder="Describe your event"
-              rows={4}
-              className="input-standard"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block body-text font-semibold text-primaryText mb-2">Date *</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                required
-                className="input-standard"
-              />
+              <div>
+                <label className="block body-text font-semibold text-primaryText mb-2">Description *</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Describe your event"
+                  rows={4}
+                  className="input-standard"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block body-text font-semibold text-primaryText mb-2">Time *</label>
-              <input
-                type="time"
-                name="time"
-                value={formData.time}
-                onChange={handleInputChange}
-                required
-                className="input-standard"
-              />
+          </Step>
+
+          <Step>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block body-text font-semibold text-primaryText mb-2">Date *</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    required
+                    className="input-standard"
+                  />
+                </div>
+                <div>
+                  <label className="block body-text font-semibold text-primaryText mb-2">Time *</label>
+                  <input
+                    type="time"
+                    name="time"
+                    value={formData.time}
+                    onChange={handleInputChange}
+                    required
+                    className="input-standard"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block body-text font-semibold text-primaryText mb-2">Venue *</label>
+                <input
+                  type="text"
+                  name="venue"
+                  value={formData.venue}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Event location"
+                  className="input-standard"
+                />
+              </div>
             </div>
-          </div>
+          </Step>
 
-          <div>
-            <label className="block body-text font-semibold text-primaryText mb-2">Venue *</label>
-            <input
-              type="text"
-              name="venue"
-              value={formData.venue}
-              onChange={handleInputChange}
-              required
-              placeholder="Event location"
-              className="input-standard"
-            />
-          </div>
+          <Step>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block body-text font-semibold text-primaryText mb-2">Price ($) *</label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    className="input-standard"
+                  />
+                </div>
+                <div>
+                  <label className="block body-text font-semibold text-primaryText mb-2">Available Tickets *</label>
+                  <input
+                    type="number"
+                    name="ticketsAvailable"
+                    value={formData.ticketsAvailable}
+                    onChange={handleInputChange}
+                    required
+                    min="1"
+                    placeholder="Number of tickets"
+                    className="input-standard"
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block body-text font-semibold text-primaryText mb-2">Price ($) *</label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleInputChange}
-                required
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                className="input-standard"
-              />
+              <div>
+                <label className="block body-text font-semibold text-primaryText mb-2">Category *</label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  required
+                  className="input-standard"
+                >
+                  <option value="general">General</option>
+                  <option value="music">Music</option>
+                  <option value="sports">Sports</option>
+                  <option value="technology">Technology</option>
+                  <option value="business">Business</option>
+                  <option value="education">Education</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="food">Food & Drink</option>
+                  <option value="health">Health & Wellness</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block body-text font-semibold text-primaryText mb-2">Available Tickets *</label>
-              <input
-                type="number"
-                name="ticketsAvailable"
-                value={formData.ticketsAvailable}
-                onChange={handleInputChange}
-                required
-                min="1"
-                placeholder="Number of tickets"
-                className="input-standard"
-              />
+          </Step>
+
+          <Step>
+            <div className="space-y-6">
+              <div>
+                <label className="block body-text font-semibold text-primaryText mb-2">Event Banner</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerChange}
+                  className="input-standard file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-primaryStart file:text-white file:font-semibold"
+                />
+                <p className="small-text mt-2">Recommended size: 1200x400 pixels. Max file size: 5MB.</p>
+              </div>
+
+              {bannerPreview && (
+                <div>
+                  <label className="block body-text font-semibold text-primaryText mb-2">Banner Preview</label>
+                  <img
+                    src={bannerPreview}
+                    alt="Banner preview"
+                    className="w-full max-h-48 object-cover rounded-xl border border-softBorder"
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={saveEvent}
+                  className="primary-btn w-full sm:w-auto"
+                >
+                  {loading ? 'Saving...' : isEdit ? 'Update Event' : 'Create Event'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="secondary-btn w-full sm:w-auto"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
-
-          <div>
-            <label className="block body-text font-semibold text-primaryText mb-2">Category *</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleInputChange}
-              required
-              className="input-standard"
-            >
-              <option value="general">General</option>
-              <option value="music">Music</option>
-              <option value="sports">Sports</option>
-              <option value="technology">Technology</option>
-              <option value="business">Business</option>
-              <option value="education">Education</option>
-              <option value="entertainment">Entertainment</option>
-              <option value="food">Food & Drink</option>
-              <option value="health">Health & Wellness</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block body-text font-semibold text-primaryText mb-2">Event Banner</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleBannerChange}
-              className="input-standard file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-primaryStart file:text-white file:font-semibold"
-            />
-            <p className="small-text mt-2">Recommended size: 1200x400 pixels. Max file size: 5MB.</p>
-          </div>
-
-          {bannerPreview && (
-            <div>
-              <label className="block body-text font-semibold text-primaryText mb-2">Banner Preview</label>
-              <img
-                src={bannerPreview}
-                alt="Banner preview"
-                className="w-full max-h-48 object-cover rounded-xl border border-softBorder"
-              />
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <button type="submit" disabled={loading} className="primary-btn w-full sm:w-auto">
-              {loading ? 'Saving...' : isEdit ? 'Update Event' : 'Create Event'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="secondary-btn w-full sm:w-auto"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          </Step>
+        </Stepper>
       </div>
     </div>
   );
