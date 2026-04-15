@@ -5,6 +5,7 @@ import LoadingState from '../components/LoadingState';
 import Stepper, { Step } from '../components/Stepper';
 
 export default function CreateEvent() {
+  const BANNER_PREVIEW_STORAGE_KEY = 'eventBannerPreview';
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -58,6 +59,13 @@ export default function CreateEvent() {
       navigate('/organizer/login');
       return;
     }
+
+    // Restore persisted banner preview for create flow after refresh/revisit.
+    if (!id) {
+      const savedPreview = localStorage.getItem(BANNER_PREVIEW_STORAGE_KEY);
+      if (savedPreview) setBannerPreview(savedPreview);
+    }
+
     if (id) {
       setIsEdit(true);
       fetchEventData();
@@ -76,7 +84,13 @@ export default function CreateEvent() {
     if (file) {
       setBannerFile(file);
       const reader = new FileReader();
-      reader.onload = (ev) => setBannerPreview(ev.target.result);
+      reader.onload = (ev) => {
+        const base64DataUrl = ev.target?.result;
+        if (typeof base64DataUrl === 'string') {
+          setBannerPreview(base64DataUrl);
+          localStorage.setItem(BANNER_PREVIEW_STORAGE_KEY, base64DataUrl);
+        }
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -106,6 +120,7 @@ export default function CreateEvent() {
       const data = await response.json();
 
       if (response.ok) {
+        localStorage.removeItem(BANNER_PREVIEW_STORAGE_KEY);
         setSuccess(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
         setTimeout(() => navigate('/dashboard/events'), 2000);
       } else {
