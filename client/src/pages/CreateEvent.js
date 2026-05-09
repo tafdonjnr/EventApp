@@ -4,8 +4,36 @@ import { getImageUrl, getAuthToken, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
 import Stepper, { Step } from '../components/Stepper';
 
+const BANNER_PREVIEW_STORAGE_KEY = 'eventBannerPreview';
+
+function getStoredBannerPreview() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(BANNER_PREVIEW_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredBannerPreview(value) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(BANNER_PREVIEW_STORAGE_KEY, value);
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function clearStoredBannerPreview() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(BANNER_PREVIEW_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export default function CreateEvent() {
-  const BANNER_PREVIEW_STORAGE_KEY = 'eventBannerPreview';
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -60,9 +88,9 @@ export default function CreateEvent() {
       return;
     }
 
-    // Restore persisted banner preview for create flow after refresh/revisit.
+    // Restore persisted banner preview for create flow after refresh/revisit (browser only).
     if (!id) {
-      const savedPreview = localStorage.getItem(BANNER_PREVIEW_STORAGE_KEY);
+      const savedPreview = getStoredBannerPreview();
       if (savedPreview) setBannerPreview(savedPreview);
     }
 
@@ -88,7 +116,7 @@ export default function CreateEvent() {
         const base64DataUrl = ev.target?.result;
         if (typeof base64DataUrl === 'string') {
           setBannerPreview(base64DataUrl);
-          localStorage.setItem(BANNER_PREVIEW_STORAGE_KEY, base64DataUrl);
+          setStoredBannerPreview(base64DataUrl);
         }
       };
       reader.readAsDataURL(file);
@@ -120,7 +148,7 @@ export default function CreateEvent() {
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.removeItem(BANNER_PREVIEW_STORAGE_KEY);
+        clearStoredBannerPreview();
         setSuccess(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
         setTimeout(() => navigate('/dashboard/events'), 2000);
       } else {
