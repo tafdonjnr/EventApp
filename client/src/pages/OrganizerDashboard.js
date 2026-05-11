@@ -49,7 +49,9 @@ const S = {
     width: 48,
     height: 48,
     borderRadius: 12,
-    background: 'linear-gradient(135deg, #f4a261, #e08a3f)',
+    border: '2px solid var(--border-accent)',
+    boxSizing: 'border-box',
+    background: 'linear-gradient(135deg, var(--bg-button), var(--bg-button-hover))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -84,7 +86,7 @@ const S = {
   statCard: {
     background: 'var(--bg-secondary)',
     border: '1px solid var(--border-primary)',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: '20px 22px',
     display: 'flex',
     alignItems: 'center',
@@ -137,7 +139,7 @@ const S = {
     padding: '10px 20px',
     borderRadius: 10,
     border: 'none',
-    background: 'linear-gradient(135deg, #f4a261, #e08a3f)',
+    background: 'linear-gradient(135deg, var(--bg-button), var(--bg-button-hover))',
     color: '#fff',
     fontSize: 14,
     fontWeight: 600,
@@ -146,7 +148,7 @@ const S = {
     alignItems: 'center',
     gap: 6,
     transition: 'opacity 0.2s, transform 0.15s',
-    boxShadow: '0 2px 10px rgba(244,162,97,0.35)',
+    boxShadow: '0 2px 14px var(--shadow-accent)',
   },
   secondaryBtn: {
     padding: '10px 20px',
@@ -179,7 +181,8 @@ const S = {
     fontSize: 13,
     color: 'var(--text-muted)',
     background: 'var(--bg-tertiary)',
-    padding: '3px 10px',
+    border: '1px solid var(--border-primary)',
+    padding: '3px 12px',
     borderRadius: 20,
     fontWeight: 500,
   },
@@ -197,13 +200,13 @@ const S = {
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    transition: 'transform 0.2s, box-shadow 0.2s',
+    transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
   },
   eventBanner: { width: '100%', height: 148, objectFit: 'cover' },
   bannerPlaceholder: {
     width: '100%',
     height: 148,
-    background: 'linear-gradient(135deg, #1e1e2f 0%, #2b2b3f 100%)',
+    background: 'linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -242,9 +245,9 @@ const S = {
     flex: 1,
     padding: '9px 0',
     borderRadius: 9,
-    border: '1px solid rgba(255,107,107,0.35)',
+    border: '1px solid var(--text-error)',
     background: 'transparent',
-    color: '#ff6b6b',
+    color: 'var(--text-error)',
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
@@ -257,7 +260,7 @@ const S = {
     borderRadius: 10,
     background: 'rgba(255,107,107,0.1)',
     border: '1px solid rgba(255,107,107,0.3)',
-    color: '#ff6b6b',
+    color: 'var(--text-error)',
     fontSize: 14,
     marginBottom: 20,
   },
@@ -266,7 +269,7 @@ const S = {
     borderRadius: 10,
     background: 'rgba(81,207,102,0.1)',
     border: '1px solid rgba(81,207,102,0.3)',
-    color: '#51cf66',
+    color: 'var(--text-success)',
     fontSize: 14,
     marginBottom: 20,
   },
@@ -340,7 +343,7 @@ function StatCard({ icon, label, value, accent }) {
       style={S.statCard}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)';
+        e.currentTarget.style.boxShadow = '0 10px 28px var(--shadow-primary)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
@@ -501,15 +504,15 @@ export default function OrganizerDashboard() {
                   <stop offset="95%" stopColor="#339af0" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="name" tick={{ fill: '#888', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#888', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" opacity={0.35} />
+              <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
               <Area type="monotone" dataKey="revenue" stroke="#f4a261" strokeWidth={2} fill="url(#revenueGrad)" />
               <Area type="monotone" dataKey="tickets" stroke="#339af0" strokeWidth={2} fill="url(#ticketsGrad)" />
             </AreaChart>
           </ResponsiveContainer>
-          <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 24, height: 2, background: '#f4a261', borderRadius: 2, display: 'inline-block' }} />
               Revenue (₦)
@@ -581,8 +584,8 @@ function EventCard({ ev, onEdit, onDelete }) {
       style={S.eventCard}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-3px)';
-        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.3)';
-        e.currentTarget.style.borderColor = 'rgba(244,162,97,0.35)';
+        e.currentTarget.style.boxShadow = '0 12px 32px var(--shadow-secondary)';
+        e.currentTarget.style.borderColor = 'var(--border-accent)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
@@ -609,7 +612,7 @@ function EventCard({ ev, onEdit, onDelete }) {
           <div style={S.metaRow}><span style={S.metaIcon}>🕐</span>{dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
           <div style={S.metaRow}><span style={S.metaIcon}>📍</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.venue}</span></div>
           <div style={S.metaRow}><span style={S.metaIcon}>🏷</span>{ev.category}</div>
-          <div style={S.metaRow}><span style={S.metaIcon}>₦</span><strong style={{ color: 'var(--text-accent)' }}>₦{Number(ev.price).toLocaleString()}</strong></div>
+          <div style={S.metaRow}><span style={S.metaIcon}>💵</span><strong style={{ color: 'var(--text-accent)' }}>₦{Number(ev.price).toLocaleString()}</strong></div>
         </div>
 
         <TicketsBadge available={ev.ticketsAvailable || 0} sold={ev.ticketsSold || 0} />

@@ -52,25 +52,16 @@ export default function AttendeeDashboard() {
     loadAttendeeData();
   }, [user, userRole, navigate, loadAttendeeData]);
 
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'registered': return { background: 'rgba(81,207,102,0.12)', color: '#51cf66', border: '1px solid rgba(81,207,102,0.3)' };
-      case 'attended':   return { background: 'rgba(51,154,240,0.12)', color: '#339af0', border: '1px solid rgba(51,154,240,0.3)' };
-      case 'cancelled':  return { background: 'rgba(255,107,107,0.12)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' };
-      default:           return { background: 'rgba(136,136,136,0.12)', color: '#888', border: '1px solid rgba(136,136,136,0.3)' };
-    }
-  };
-
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-12 sm:py-16 min-h-[60vh] flex items-center justify-center">
+      <div className="ad-page max-w-7xl mx-auto px-4 py-12 sm:py-16 sm:px-6 min-h-[60vh] flex items-center justify-center">
         <LoadingState message="Loading your dashboard..." size="large" containerStyle={{ minHeight: '60vh' }} />
       </div>
     );
   }
 
   return (
-    <div className="ad-page">
+    <div className="ad-page max-w-7xl mx-auto px-4 py-12 sm:py-16 sm:px-6">
       <div className="ad-inner">
 
         {/* ── Header ── */}
@@ -156,10 +147,11 @@ export default function AttendeeDashboard() {
                     <div className="ad-card-top">
                       <h3 className="ad-card-title">{registration.event?.title}</h3>
                       <span
-                        className="ad-status-badge"
-                        style={getStatusStyle(registration.status)}
+                        className={`ad-status-badge ad-status-badge--${registration.status === 'registered' || registration.status === 'attended' || registration.status === 'cancelled' ? registration.status : 'default'}`}
                       >
-                        {registration.status?.charAt(0).toUpperCase() + registration.status?.slice(1)}
+                        {registration.status
+                          ? `${registration.status.charAt(0).toUpperCase()}${registration.status.slice(1)}`
+                          : '—'}
                       </span>
                     </div>
 
@@ -187,7 +179,7 @@ export default function AttendeeDashboard() {
         .ad-inner {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 40px 24px 64px;
+          padding: 0;
         }
 
         /* Header */
@@ -410,6 +402,31 @@ export default function AttendeeDashboard() {
           font-weight: 600;
           white-space: nowrap;
           flex-shrink: 0;
+          border: 1px solid transparent;
+        }
+        /* Badges: rgba fills read on dark + light; text uses theme tokens */
+        .ad-status-badge--registered {
+          background: rgba(81, 207, 102, 0.14);
+          border-color: rgba(81, 207, 102, 0.38);
+          color: var(--text-success);
+        }
+        .ad-status-badge--attended {
+          background: rgba(51, 154, 240, 0.14);
+          border-color: rgba(51, 154, 240, 0.38);
+          color: #339af0;
+        }
+        [data-theme="light"] .ad-status-badge--attended {
+          color: #1d4ed8;
+        }
+        .ad-status-badge--cancelled {
+          background: rgba(255, 107, 107, 0.14);
+          border-color: rgba(255, 107, 107, 0.38);
+          color: var(--text-error);
+        }
+        .ad-status-badge--default {
+          background: rgba(136, 136, 136, 0.12);
+          border-color: rgba(136, 136, 136, 0.35);
+          color: var(--text-muted);
         }
         .ad-card-meta {
           display: flex;
@@ -437,7 +454,6 @@ export default function AttendeeDashboard() {
 
         /* Responsive */
         @media (max-width: 640px) {
-          .ad-inner { padding: 24px 16px 48px; }
           .ad-grid { grid-template-columns: 1fr; }
           .ad-profile-grid { grid-template-columns: 1fr 1fr; }
           .ad-actions-card { flex-direction: column; align-items: flex-start; }
