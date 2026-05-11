@@ -15,7 +15,7 @@ export default function AttendeeDashboard() {
   const loadAttendeeData = useCallback(async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/attendees/profile`, {
@@ -52,12 +52,12 @@ export default function AttendeeDashboard() {
     loadAttendeeData();
   }, [user, userRole, navigate, loadAttendeeData]);
 
-  const getStatusClass = (status) => {
+  const getStatusStyle = (status) => {
     switch (status) {
-      case 'registered': return 'bg-green-100 text-green-800';
-      case 'attended': return 'bg-blue-100 text-blue-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'registered': return { background: 'rgba(81,207,102,0.12)', color: '#51cf66', border: '1px solid rgba(81,207,102,0.3)' };
+      case 'attended':   return { background: 'rgba(51,154,240,0.12)', color: '#339af0', border: '1px solid rgba(51,154,240,0.3)' };
+      case 'cancelled':  return { background: 'rgba(255,107,107,0.12)', color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.3)' };
+      default:           return { background: 'rgba(136,136,136,0.12)', color: '#888', border: '1px solid rgba(136,136,136,0.3)' };
     }
   };
 
@@ -70,77 +70,379 @@ export default function AttendeeDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 sm:py-16 sm:px-6">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="heading-1 mb-1">Welcome back, {attendee?.name}!</h1>
-          <p className="body-text small-text text-mutedText">Manage your events and profile</p>
-        </div>
-        <button type="button" className="secondary-btn" onClick={logout}>Logout</button>
-      </header>
+    <div className="ad-page">
+      <div className="ad-inner">
 
-      {error && <div className="card-standard mb-6 text-red-600 border-red-200 bg-red-50">{error}</div>}
+        {/* ── Header ── */}
+        <header className="ad-header">
+          <div>
+            <h1 className="ad-welcome">Welcome back, {attendee?.name}!</h1>
+            <p className="ad-subtitle">Manage your events and profile</p>
+          </div>
+          <button type="button" className="ad-logout-btn" onClick={logout}>
+            Logout
+          </button>
+        </header>
 
-      <section className="card-standard mb-8">
-        <h2 className="heading-3 mb-4">Profile Information</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card-standard">
-            <div className="small-text text-mutedText mb-1">Name</div>
-            <div className="body-text font-semibold">{attendee?.name}</div>
-          </div>
-          <div className="card-standard">
-            <div className="small-text text-mutedText mb-1">Email</div>
-            <div className="body-text font-semibold">{attendee?.email}</div>
-          </div>
-          <div className="card-standard">
-            <div className="small-text text-mutedText mb-1">Phone</div>
-            <div className="body-text font-semibold">{attendee?.phone || 'Not provided'}</div>
-          </div>
-          <div className="card-standard">
-            <div className="small-text text-mutedText mb-1">Events Registered</div>
-            <div className="body-text font-semibold">{attendee?.registeredEvents?.length || 0}</div>
-          </div>
-        </div>
-      </section>
+        {/* ── Error ── */}
+        {error && (
+          <div className="ad-alert ad-alert--error">{error}</div>
+        )}
 
-      <section className="card-standard mb-8">
-        <h2 className="heading-3 mb-4">Quick Actions</h2>
-        <div className="flex flex-wrap gap-4">
-          <button type="button" className="primary-btn" onClick={() => navigate('/attendee/tickets')}>
+        {/* ── Profile Card ── */}
+        <section className="ad-section">
+          <h2 className="ad-section-title">Profile Information</h2>
+          <div className="ad-profile-grid">
+            <div className="ad-profile-item">
+              <span className="ad-profile-label">Name</span>
+              <span className="ad-profile-value">{attendee?.name}</span>
+            </div>
+            <div className="ad-profile-item">
+              <span className="ad-profile-label">Email</span>
+              <span className="ad-profile-value">{attendee?.email}</span>
+            </div>
+            <div className="ad-profile-item">
+              <span className="ad-profile-label">Phone</span>
+              <span className="ad-profile-value">{attendee?.phone || 'Not provided'}</span>
+            </div>
+            <div className="ad-profile-item ad-profile-item--accent">
+              <span className="ad-profile-label">Events Registered</span>
+              <span className="ad-profile-value ad-profile-value--big">{attendee?.registeredEvents?.length || 0}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Quick Actions ── */}
+        <section className="ad-actions-card">
+          <span className="ad-actions-label">Quick Actions</span>
+          <button
+            type="button"
+            className="ad-btn-primary"
+            onClick={() => navigate('/attendee/tickets')}
+          >
             🎫 View My Tickets
           </button>
-        </div>
-      </section>
+        </section>
 
-      <section className="card-standard">
-        <h2 className="heading-3 mb-6">My Events</h2>
-        {!attendee?.registeredEvents || attendee.registeredEvents.length === 0 ? (
-          <EmptyState {...EmptyStates.attendeeEvents} />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {attendee.registeredEvents.map((registration) => (
-              <div key={registration._id} className="card-standard p-0 overflow-hidden flex flex-col">
-                {registration.event?.banner && (
-                  <img src={getImageUrl(registration.event.banner)} alt={registration.event.title} className="w-full h-36 sm:h-40 object-cover" />
-                )}
-                <div className="p-4 flex-1">
-                  <h3 className="heading-3 mb-2">{registration.event?.title}</h3>
-                  <div className="space-y-1 small-text mb-3">
-                    <p><strong>Date:</strong> {registration.event?.date ? new Date(registration.event.date).toLocaleDateString() : 'TBD'}</p>
-                    <p><strong>Time:</strong> {registration.event?.date ? new Date(registration.event.date).toLocaleTimeString() : 'TBD'}</p>
-                    <p><strong>Venue:</strong> {registration.event?.venue}</p>
-                    <p><strong>Price:</strong> ${registration.event?.price}</p>
-                    <p><strong>Registered:</strong> {new Date(registration.registrationDate).toLocaleDateString()}</p>
-                  </div>
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusClass(registration.status)}`}>
-                    {registration.status?.charAt(0).toUpperCase() + registration.status?.slice(1)}
-                  </span>
-                </div>
-              </div>
-            ))}
+        {/* ── Events ── */}
+        <section className="ad-section">
+          <div className="ad-events-header">
+            <h2 className="ad-section-title" style={{ margin: 0 }}>My Events</h2>
+            {attendee?.registeredEvents?.length > 0 && (
+              <span className="ad-events-count">
+                {attendee.registeredEvents.length} registered
+              </span>
+            )}
           </div>
-        )}
-      </section>
+
+          {!attendee?.registeredEvents || attendee.registeredEvents.length === 0 ? (
+            <EmptyState {...EmptyStates.attendeeEvents} />
+          ) : (
+            <div className="ad-grid">
+              {attendee.registeredEvents.map((registration) => (
+                <div key={registration._id} className="ad-card">
+                  {registration.event?.banner && (
+                    <img
+                      src={getImageUrl(registration.event.banner)}
+                      alt={registration.event.title}
+                      className="ad-card-banner"
+                    />
+                  )}
+                  {!registration.event?.banner && (
+                    <div className="ad-card-banner-placeholder">🎟</div>
+                  )}
+
+                  <div className="ad-card-body">
+                    <div className="ad-card-top">
+                      <h3 className="ad-card-title">{registration.event?.title}</h3>
+                      <span
+                        className="ad-status-badge"
+                        style={getStatusStyle(registration.status)}
+                      >
+                        {registration.status?.charAt(0).toUpperCase() + registration.status?.slice(1)}
+                      </span>
+                    </div>
+
+                    <div className="ad-card-meta">
+                      <p><span className="ad-meta-icon">📅</span>{registration.event?.date ? new Date(registration.event.date).toLocaleDateString() : 'TBD'}</p>
+                      <p><span className="ad-meta-icon">🕐</span>{registration.event?.date ? new Date(registration.event.date).toLocaleTimeString() : 'TBD'}</p>
+                      <p><span className="ad-meta-icon">📍</span>{registration.event?.venue}</p>
+                      <p><span className="ad-meta-icon">💵</span><strong className="ad-price">₦{Number(registration.event?.price ?? 0).toLocaleString()}</strong></p>
+                      <p><span className="ad-meta-icon">🗓</span>Registered {new Date(registration.registrationDate).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <style>{`
+        .ad-page {
+          min-height: 100vh;
+          background-color: var(--bg-primary);
+          color: var(--text-primary);
+        }
+        .ad-inner {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 40px 24px 64px;
+        }
+
+        /* Header */
+        .ad-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-bottom: 32px;
+        }
+        .ad-welcome {
+          margin: 0 0 4px;
+          font-size: 26px;
+          font-weight: 700;
+          color: var(--text-primary);
+          letter-spacing: -0.4px;
+        }
+        .ad-subtitle {
+          margin: 0;
+          font-size: 13px;
+          color: var(--text-muted);
+        }
+        .ad-logout-btn {
+          padding: 9px 20px;
+          border-radius: 10px;
+          border: 1px solid var(--border-primary);
+          background: transparent;
+          color: var(--text-secondary);
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: border-color 0.2s, color 0.2s;
+        }
+        .ad-logout-btn:hover {
+          border-color: var(--border-accent);
+          color: var(--text-accent);
+        }
+
+        /* Alert */
+        .ad-alert {
+          padding: 12px 16px;
+          border-radius: 10px;
+          font-size: 14px;
+          margin-bottom: 20px;
+        }
+        .ad-alert--error {
+          background: rgba(255,107,107,0.1);
+          border: 1px solid rgba(255,107,107,0.3);
+          color: var(--text-error);
+        }
+
+        /* Section */
+        .ad-section {
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-primary);
+          border-radius: 16px;
+          padding: 22px 24px;
+          margin-bottom: 20px;
+        }
+        .ad-section-title {
+          margin: 0 0 18px;
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        /* Profile grid */
+        .ad-profile-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 12px;
+        }
+        .ad-profile-item {
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border-primary);
+          border-radius: 12px;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .ad-profile-item--accent {
+          border-color: var(--border-accent);
+          background: rgba(244,162,97,0.06);
+        }
+        .ad-profile-label {
+          font-size: 11px;
+          font-weight: 500;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .ad-profile-value {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text-primary);
+          word-break: break-word;
+        }
+        .ad-profile-value--big {
+          font-size: 28px;
+          font-weight: 700;
+          color: var(--text-accent);
+          line-height: 1;
+          margin-top: 2px;
+        }
+
+        /* Actions card */
+        .ad-actions-card {
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-primary);
+          border-radius: 16px;
+          padding: 18px 22px;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .ad-actions-label {
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .ad-btn-primary {
+          padding: 10px 20px;
+          border-radius: 10px;
+          border: none;
+          background: linear-gradient(135deg, var(--bg-button), var(--bg-button-hover));
+          color: #fff;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: opacity 0.2s;
+          box-shadow: 0 2px 10px var(--shadow-accent);
+        }
+        .ad-btn-primary:hover { opacity: 0.88; }
+
+        /* Events section header */
+        .ad-events-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 18px;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .ad-events-count {
+          font-size: 13px;
+          color: var(--text-muted);
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border-primary);
+          padding: 3px 12px;
+          border-radius: 20px;
+          font-weight: 500;
+        }
+
+        /* Events grid */
+        .ad-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+          gap: 18px;
+        }
+
+        /* Event card */
+        .ad-card {
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border-primary);
+          border-radius: 14px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+        .ad-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 10px 28px var(--shadow-secondary);
+          border-color: var(--border-accent);
+        }
+        .ad-card-banner {
+          width: 100%;
+          height: 140px;
+          object-fit: cover;
+        }
+        .ad-card-banner-placeholder {
+          width: 100%;
+          height: 140px;
+          background: var(--bg-secondary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 34px;
+        }
+        .ad-card-body {
+          padding: 14px 16px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .ad-card-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .ad-card-title {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--text-primary);
+          line-height: 1.35;
+          flex: 1;
+        }
+        .ad-status-badge {
+          padding: 3px 10px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .ad-card-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+        }
+        .ad-card-meta p {
+          margin: 0;
+          font-size: 13px;
+          color: var(--text-secondary);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .ad-meta-icon {
+          width: 18px;
+          text-align: center;
+          font-size: 13px;
+          flex-shrink: 0;
+        }
+        .ad-price {
+          color: var(--text-accent);
+          font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+          .ad-inner { padding: 24px 16px 48px; }
+          .ad-grid { grid-template-columns: 1fr; }
+          .ad-profile-grid { grid-template-columns: 1fr 1fr; }
+          .ad-actions-card { flex-direction: column; align-items: flex-start; }
+        }
+      `}</style>
     </div>
   );
-} 
+}
