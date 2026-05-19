@@ -10,7 +10,7 @@ export default function AttendeeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { user, userRole, logout, clearAuth } = useAuth();
+  const { user, userRole, logout } = useAuth();
 
   const loadAttendeeData = useCallback(async () => {
     setLoading(true);
@@ -26,7 +26,7 @@ export default function AttendeeDashboard() {
       });
 
       if (response.status === 401 || response.status === 403) {
-        clearAuth();
+        logout();
         navigate('/attendee/login');
         return;
       }
@@ -43,7 +43,7 @@ export default function AttendeeDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [clearAuth, navigate]);
+  }, [logout, navigate]);
 
   useEffect(() => {
     if (!user || userRole !== 'attendee') {
