@@ -5,24 +5,34 @@
 
 /* Buttons */
 .primary-btn {
-  @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-primaryText bg-primaryGradient border border-softBorder shadow-sm;
-  @apply hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-2;
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-[10px] text-sm font-semibold text-primaryText bg-primaryGradient border border-softBorder;
+  @apply transition-opacity duration-200 hover:opacity-[0.88] focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-2;
+  box-shadow: 0 2px 10px var(--shadow-accent);
 }
 
 .secondary-btn {
-  @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-primaryText bg-white/90 border border-softBorder;
-  @apply hover:bg-white focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-2;
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-[10px] text-sm font-medium text-primaryText bg-white/90 border border-softBorder;
+  @apply transition-[border-color,color] duration-200 hover:border-primaryStart focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-2;
 }
 
 /* Cards */
 .card-standard {
-  @apply rounded-xl border border-softBorder bg-white shadow-sm p-4 sm:p-6;
+  @apply rounded-2xl p-4 sm:p-6;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 2px 12px var(--shadow-primary);
 }
 
 /* Form inputs */
 .input-standard {
-  @apply w-full px-4 py-2 rounded-xl border border-softBorder text-primaryText bg-white;
-  @apply focus:outline-none focus:ring-2 focus:ring-primaryStart focus:ring-offset-0 focus:border-primaryStart;
+  @apply w-full px-4 py-2 rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--border-accent)] focus:ring-offset-0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+}
+
+.input-standard:focus {
+  border-color: var(--border-accent);
 }
 
 textarea.input-standard {
@@ -35,21 +45,23 @@ select.input-standard {
 
 /* Typography */
 .heading-1 {
-  @apply text-2xl sm:text-3xl lg:text-4xl font-bold text-primaryText;
+  @apply text-2xl sm:text-3xl lg:text-4xl font-bold text-primaryText tracking-[-0.5px];
 }
 
 .heading-2 {
-  @apply text-xl sm:text-2xl font-bold text-primaryText;
+  @apply text-xl sm:text-2xl font-bold text-primaryText tracking-[-0.4px];
 }
 
 .heading-3 {
-  @apply text-lg sm:text-xl font-semibold text-primaryText;
+  @apply text-lg sm:text-xl font-semibold text-primaryText tracking-[-0.2px];
 }
 
 .body-text {
-  @apply text-base text-primaryText;
+  @apply text-base;
+  color: var(--text-primary);
 }
 
 .small-text {
-  @apply text-sm text-mutedText;
+  @apply text-sm;
+  color: var(--text-muted);
 }

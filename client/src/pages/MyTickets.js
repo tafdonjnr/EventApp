@@ -29,7 +29,7 @@ export default function MyTickets() {
 
   useEffect(() => {
     if (!user || userRole !== 'attendee') {
-      navigate('/');
+      navigate('/attendee/login');
       return;
     }
     fetchTickets();

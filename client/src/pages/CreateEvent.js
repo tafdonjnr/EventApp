@@ -4,35 +4,6 @@ import { getImageUrl, getAuthToken, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
 import Stepper, { Step } from '../components/Stepper';
 
-const BANNER_PREVIEW_STORAGE_KEY = 'eventBannerPreview';
-
-function getStoredBannerPreview() {
-  if (typeof window === 'undefined') return null;
-  try {
-    return localStorage.getItem(BANNER_PREVIEW_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setStoredBannerPreview(value) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(BANNER_PREVIEW_STORAGE_KEY, value);
-  } catch {
-    // ignore quota / private mode
-  }
-}
-
-function clearStoredBannerPreview() {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.removeItem(BANNER_PREVIEW_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
-
 export default function CreateEvent() {
   const [formData, setFormData] = useState({
     title: '',
@@ -44,8 +15,8 @@ export default function CreateEvent() {
     ticketsAvailable: '',
     category: 'general',
   });
-  const [bannerFile, setBannerFile] = useState(null);
-  const [bannerPreview, setBannerPreview] = useState('');
+  const [banner, setBanner] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -83,15 +54,22 @@ export default function CreateEvent() {
   }, [id, token]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('createEvent_bannerPreview');
+        if (saved) {
+          setBannerPreview(saved);
+        }
+      } catch (err) {
+        console.warn('localStorage unavailable', err);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (!token) {
       navigate('/organizer/login');
       return;
-    }
-
-    // Restore persisted banner preview for create flow after refresh/revisit (browser only).
-    if (!id) {
-      const savedPreview = getStoredBannerPreview();
-      if (savedPreview) setBannerPreview(savedPreview);
     }
 
     if (id) {
@@ -109,18 +87,25 @@ export default function CreateEvent() {
 
   const handleBannerChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setBannerFile(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const base64DataUrl = ev.target?.result;
-        if (typeof base64DataUrl === 'string') {
-          setBannerPreview(base64DataUrl);
-          setStoredBannerPreview(base64DataUrl);
+    if (!file) return;
+
+    // Keep the actual File object in state for form submission
+    setBanner(file);
+
+    // Convert to base64 for preview and localStorage
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result;
+      setBannerPreview(base64);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('createEvent_bannerPreview', base64);
+        } catch (err) {
+          console.warn('localStorage unavailable', err);
         }
-      };
-      reader.readAsDataURL(file);
-    }
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const saveEvent = async () => {
@@ -136,7 +121,7 @@ export default function CreateEvent() {
       formPayload.append('price', formData.price);
       formPayload.append('ticketsAvailable', formData.ticketsAvailable);
       formPayload.append('category', formData.category);
-      if (bannerFile) formPayload.append('banner', bannerFile);
+      if (banner) formPayload.append('banner', banner);
 
       const url = isEdit ? `${API_BASE_URL}/api/events/${id}` : `${API_BASE_URL}/api/events`;
       const method = isEdit ? 'PUT' : 'POST';
@@ -148,7 +133,11 @@ export default function CreateEvent() {
       const data = await response.json();
 
       if (response.ok) {
-        clearStoredBannerPreview();
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem('createEvent_bannerPreview');
+          } catch (err) {}
+        }
         setSuccess(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
         setTimeout(() => navigate('/dashboard/events'), 2000);
       } else {

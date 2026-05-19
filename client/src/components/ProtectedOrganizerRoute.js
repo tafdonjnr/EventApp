@@ -29,7 +29,19 @@ const ProtectedOrganizerRoute = ({ children }) => {
 
   const role = user?.role || userRole;
 
-  if (!user || role !== ROLES.ORGANIZER) {
+  if (!user || !role) {
+    return <Navigate to="/organizer/login" replace />;
+  }
+
+  if (role === ROLES.ATTENDEE) {
+    return <Navigate to="/attendee/dashboard" replace />;
+  }
+
+  if (role === ROLES.ADMIN) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (role !== ROLES.ORGANIZER) {
     return <Navigate to="/" replace />;
   }
 

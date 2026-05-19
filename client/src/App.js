@@ -67,6 +67,9 @@ const AppContent = () => {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
         
+        {/* Attendee shortcuts */}
+        <Route path="/attendee" element={<Navigate to="/attendee/dashboard" replace />} />
+
         {/* Protected Attendee Routes */}
         <Route path="/attendee/dashboard" element={
           <ProtectedRoute allowedRoles={['attendee']}>

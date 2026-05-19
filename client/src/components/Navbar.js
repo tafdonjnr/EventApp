@@ -68,17 +68,17 @@ export default function Navbar() {
 
   const displayName = user?.name || user?.email || 'Account';
 
-  const navLinkBase = 'text-white font-semibold rounded-xl px-3 py-2 hover:opacity-90';
-  const navLinkDesktop = `${navLinkBase} inline-block`;
-  const navLinkMobile = `${navLinkBase} block w-full text-left px-4 py-2 border-b border-white/20`;
-  const navBtnMobile = 'block w-full text-left px-4 py-2 text-white font-semibold rounded-xl border-b border-white/20 hover:opacity-90';
+  const navLinkBase = 'nav-link';
+  const navLinkDesktop = `${navLinkBase} nav-link--desktop`;
+  const navLinkMobile = `${navLinkBase} nav-link--mobile`;
+  const navBtnMobile = 'nav-link nav-btn--mobile';
 
   return (
-    <nav className="sticky top-0 left-0 w-full z-20 bg-primaryGradient shadow-md">
+    <nav className="nav-bar sticky top-0 left-0 w-full z-20">
       <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 sm:h-14">
           <div className="flex items-center justify-between min-h-[3rem] sm:min-h-0">
-            <Link to="/" className="heading-2 text-white hover:opacity-90">
+            <Link to="/" className="nav-brand">
               Verse
             </Link>
 
@@ -88,7 +88,7 @@ export default function Navbar() {
                 data-hamburger
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-xl text-white hover:opacity-90"
+                className="nav-hamburger"
                 aria-label="Toggle menu"
               >
                 <span className="block w-6 h-5 relative">
@@ -114,7 +114,7 @@ export default function Navbar() {
               btnClass={navLinkDesktop}
             />
 
-            <div className="flex items-center gap-2 pl-2 border-l border-white/30">
+            <div className="nav-toolbar flex items-center gap-2 pl-2">
               <ThemeToggle />
 
               {user ? (
@@ -122,7 +122,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="secondary-btn !text-white !border-white/50 !bg-white/20 min-w-0"
+                    className="nav-user-btn"
                   >
                     {displayName}
                     <svg className={`w-4 h-4 ml-1 ${userDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -130,13 +130,13 @@ export default function Navbar() {
                     </svg>
                   </button>
                   {userDropdownOpen && (
-                    <div className="absolute right-0 mt-1 w-48 py-1 bg-white rounded-xl shadow-xl border border-softBorder overflow-hidden z-[21]">
+                    <div className="nav-dropdown-menu absolute right-0 mt-1 w-48 py-1 overflow-hidden z-[21]">
                       {userRole === 'admin' && (
-                        <Link to="/admin" className="block px-4 py-2 text-sm text-primaryText hover:bg-gray-100" onClick={() => setUserDropdownOpen(false)}>
+                        <Link to="/admin" className="nav-dropdown-item" onClick={() => setUserDropdownOpen(false)}>
                           Admin
                         </Link>
                       )}
-                      <button type="button" onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-primaryText hover:bg-gray-100">
+                      <button type="button" onClick={handleLogout} className="nav-dropdown-item nav-dropdown-item--btn">
                         Logout
                       </button>
                     </div>
@@ -154,7 +154,7 @@ export default function Navbar() {
                       { to: '/organizer/register', label: 'Organizer' },
                       { to: '/attendee/register', label: 'Attendee' },
                     ]}
-                    triggerClass="primary-btn !text-primaryText"
+                    triggerClass="nav-register-btn"
                   />
                   <AuthDropdown
                     ref={loginDropdownRef}
@@ -166,7 +166,7 @@ export default function Navbar() {
                       { to: '/organizer/login', label: 'Organizer' },
                       { to: '/attendee/login', label: 'Attendee' },
                     ]}
-                    triggerClass="secondary-btn !text-primaryText !bg-white/90 !border-white/50"
+                    triggerClass="nav-login-btn"
                   />
                 </>
               )}
@@ -186,7 +186,7 @@ export default function Navbar() {
       {/* Mobile menu */}
       <div
         ref={mobileMenuRef}
-        className={`fixed top-[var(--navbar-height,4rem)] right-0 w-[280px] max-w-[85vw] bottom-0 bg-primaryGradient shadow-2xl z-[19] sm:hidden overflow-y-auto border-l border-white/20 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`nav-mobile-panel fixed top-[var(--navbar-height,4rem)] right-0 w-[280px] max-w-[85vw] bottom-0 z-[19] sm:hidden overflow-y-auto ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex flex-col gap-0 px-4 py-2 sm:px-6">
           <NavLinks
@@ -205,26 +205,207 @@ export default function Navbar() {
             <Link to="/admin" className={navLinkMobile} onClick={closeAll}>Admin</Link>
           )}
 
-          <div className="flex items-center gap-2 py-2 border-b border-white/20">
+          <div className="nav-mobile-theme-row flex items-center gap-2 py-2">
             <ThemeToggle />
-            <span className="small-text text-white/90">Theme</span>
+            <span className="nav-mobile-theme-label">Theme</span>
           </div>
 
           {!user && (
             <>
-              <p className="small-text uppercase tracking-wider mt-2 mb-1 px-4 py-2 text-white/80">Register</p>
+              <p className="nav-mobile-section-label">Register</p>
               <Link to="/organizer/register" className={navLinkMobile} onClick={closeAll}>Organizer</Link>
               <Link to="/attendee/register" className={navLinkMobile} onClick={closeAll}>Attendee</Link>
-              <p className="small-text uppercase tracking-wider mt-2 mb-1 px-4 py-2 text-white/80">Login</p>
+              <p className="nav-mobile-section-label">Login</p>
               <Link to="/organizer/login" className={navLinkMobile} onClick={closeAll}>Organizer</Link>
               <Link to="/attendee/login" className={navLinkMobile} onClick={closeAll}>Attendee</Link>
             </>
           )}
         </div>
       </div>
+
+      <style>{navStyles}</style>
     </nav>
   );
 }
+
+const navStyles = `
+  .nav-bar {
+    background: rgba(15, 15, 35, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .nav-brand {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #fff;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .nav-brand:hover {
+    opacity: 0.92;
+    color: #fff;
+  }
+
+  .nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 7px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .nav-link--desktop {
+    display: inline-block;
+  }
+
+  .nav-link--mobile,
+  .nav-btn--mobile {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 20px;
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .nav-link:hover,
+  .nav-link:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .nav-toolbar {
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .nav-register-btn,
+  .nav-login-btn,
+  .nav-user-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .nav-register-btn {
+    background: linear-gradient(135deg, var(--bg-button), var(--bg-button-hover));
+    color: #fff;
+    border: none;
+    box-shadow: 0 2px 10px var(--shadow-accent);
+  }
+
+  .nav-register-btn:hover {
+    opacity: 0.92;
+    color: #fff;
+  }
+
+  .nav-login-btn,
+  .nav-user-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+  }
+
+  .nav-login-btn:hover,
+  .nav-user-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .nav-dropdown-menu {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow-primary);
+  }
+
+  .nav-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--text-primary);
+    text-decoration: none;
+    text-align: left;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s ease;
+  }
+
+  .nav-dropdown-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .nav-dropdown-item--btn {
+    border-top: 1px solid var(--border-primary);
+  }
+
+  .nav-hamburger {
+    padding: 8px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .nav-hamburger:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .nav-mobile-panel {
+    background: rgba(15, 15, 35, 0.97);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+    transition: transform 0.3s ease;
+  }
+
+  .nav-mobile-theme-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .nav-mobile-theme-label {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .nav-mobile-section-label {
+    margin: 12px 0 4px;
+    padding: 8px 20px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.55);
+  }
+`;
 
 const AuthDropdown = React.forwardRef(function AuthDropdown(
   { label, open, onToggle, onClose, items, triggerClass },
@@ -237,7 +418,7 @@ const AuthDropdown = React.forwardRef(function AuthDropdown(
         onClick={onToggle}
         aria-expanded={open}
         aria-haspopup="true"
-        className={triggerClass || 'secondary-btn'}
+        className={triggerClass || 'nav-login-btn'}
       >
         {label}
         <svg className={`w-4 h-4 ml-1 ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,7 +428,7 @@ const AuthDropdown = React.forwardRef(function AuthDropdown(
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-1 w-40 py-1 bg-white rounded-xl shadow-xl border border-softBorder overflow-hidden z-[21]"
+          className="nav-dropdown-menu absolute right-0 mt-1 w-40 py-1 overflow-hidden z-[21]"
           onClick={(e) => e.stopPropagation()}
         >
           {items.map((item) => (
@@ -255,7 +436,7 @@ const AuthDropdown = React.forwardRef(function AuthDropdown(
               key={item.to}
               to={item.to}
               role="menuitem"
-              className="block px-4 py-2 text-sm text-primaryText hover:bg-gray-100"
+              className="nav-dropdown-item"
               onClick={onClose}
             >
               {item.label}
