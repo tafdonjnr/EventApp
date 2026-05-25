@@ -55,11 +55,16 @@ exports.login = async (req, res) => {
     }
 
     res.json({
-      _id: org._id,
-      name: org.name,
-      email: org.email,
-      role: org.role,
+      message: 'Login successful',
       token: genToken(org._id, org.role),
+      organizer: {
+        id: org._id,
+        name: org.name,
+        orgName: org.orgName,
+        email: org.email,
+        logo: org.logo,
+        role: 'organizer',
+      }
     });
   } catch (err) {
     console.error('Login error:', err);
