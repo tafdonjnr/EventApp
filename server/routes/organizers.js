@@ -161,18 +161,31 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, organizer.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: organizer._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign(
+      { id: organizer._id, role: 'organizer' },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    res.json({ token });
+    res.json({
+      message: 'Login successful',
+      token,
+      organizer: {
+        id: organizer._id,
+        name: organizer.name,
+        orgName: organizer.orgName,
+        email: organizer.email,
+        logo: organizer.logo,
+        role: 'organizer',
+      }
+    });
   } catch (err) {
-    console.error('🔥 Login error:', err);
+    console.error('Login error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-/* ============================
-   🚫 DELETE THIS ROUTE — USELESS DUPLICATE
-============================ */
+
 // REMOVE this — it doesn't update anything
 // router.post('/profile', upload.single('logo'), async (req, res) => {
 //   try {
