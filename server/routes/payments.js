@@ -14,6 +14,13 @@ const Attendee = require('../models/Attendee');
 const WebhookLog = require('../models/WebhookLog');
 const Ticket = require('../models/Ticket');
 
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
@@ -27,35 +34,32 @@ function generateTicketId() {
   return `TKT_${Date.now()}_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 }
 
-// Generate QR code and save as PNG file
+// Generate QR code
 async function generateAndSaveQRCode(ticketData, ticketId) {
   try {
-    // Create QR code as data URL
     const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(ticketData), {
       errorCorrectionLevel: 'H',
       type: 'image/png',
       quality: 0.92,
-      margin: 1
+      margin: 1,
     });
-    
-    // Convert data URL to buffer
-    const base64Data = qrCodeDataURL.replace(/^data:image\/png;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    // Create filename and save path
-    const filename = `${ticketId}.png`;
-    const filePath = path.join(__dirname, 'tickets', filename);
-    
-    // Save file
-    await fs.writeFile(filePath, buffer);
-    
-    console.log(`QR code generated and saved: ${filename}`);
-    return filename; // Return just the filename for database storage
+
+    // Upload to Cloudinary
+    const cloudinary = require('cloudinary').v2;
+    const uploadRes = await cloudinary.uploader.upload(qrCodeDataURL, {
+      folder: 'verse/qrcodes',
+      public_id: ticketId,
+      overwrite: true,
+    });
+
+    console.log(`QR code uploaded to Cloudinary: ${uploadRes.secure_url}`);
+    return uploadRes.secure_url;
   } catch (error) {
     console.error('Error generating QR code:', error);
     throw new Error('Failed to generate QR code');
   }
 }
+
 
 // Send ticket email with QR code attachment - COMMENTED OUT FOR DEV
 // async function sendTicketEmail(attendeeEmail, eventTitle, ticketId, qrCodePath) {
