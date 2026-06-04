@@ -253,7 +253,7 @@ export default function CreateEvent() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block body-text font-semibold text-primaryText mb-2">Price ($) *</label>
+                  <label className="block body-text font-semibold text-primaryText mb-2">Price (₦) *</label>
                   <input
                     type="number"
                     name="price"
@@ -283,24 +283,25 @@ export default function CreateEvent() {
 
               <div>
                 <label className="block body-text font-semibold text-primaryText mb-2">Category *</label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  required
-                  className="input-standard"
-                >
-                  <option value="general">General</option>
-                  <option value="music">Music</option>
-                  <option value="sports">Sports</option>
-                  <option value="technology">Technology</option>
-                  <option value="business">Business</option>
-                  <option value="education">Education</option>
-                  <option value="entertainment">Entertainment</option>
-                  <option value="food">Food & Drink</option>
-                  <option value="health">Health & Wellness</option>
-                  <option value="other">Other</option>
-                </select>
+               <select
+  name="category"
+  value={formData.category}
+  onChange={handleInputChange}
+  required
+  className="input-standard"
+>
+  <option value="general">General</option>
+  <option value="festival">Festival</option>
+  <option value="concert">Concert</option>
+  <option value="color-festival">Color Festival</option>
+  <option value="funfair">Funfair</option>
+  <option value="rave">Rave / Party</option>
+  <option value="popup">Pop-up / Souk</option>
+  <option value="sports">Sports</option>
+  <option value="trade-fair">Trade Fair / Fashion</option>
+  <option value="food-festival">Food Festival</option>
+  <option value="outdoor">Outdoor / Adventure</option>
+</select>
               </div>
             </div>
           </Step>
