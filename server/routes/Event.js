@@ -51,7 +51,7 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
 
     // Add banner path if file was uploaded
     if (req.file) {
-      eventData.banner = `/uploads/${req.file.filename}`;
+      eventData.banner = req.file.path;
       console.log('Banner path added:', eventData.banner);
     }
 
@@ -83,7 +83,7 @@ router.put('/:id', protect, upload.single('banner'), async (req, res) => {
 
     // Add banner path if file was uploaded
     if (req.file) {
-      updateData.banner = `/uploads/${req.file.filename}`;
+      updateData.banner = req.file.path;
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(
