@@ -350,7 +350,6 @@ router.get('/verify/:reference', async (req, res) => {
     let txn = await Transaction.findOne({ reference });
     if (!txn) return res.status(404).json({ message: 'Transaction not found' });
 
-    // Always re-verify with Paystack to prevent spoofing
     try {
       const verifyRes = await axios.get(
         `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
@@ -359,18 +358,74 @@ router.get('/verify/:reference', async (req, res) => {
       const status = verifyRes.data?.data?.status;
       const providerId = verifyRes.data?.data?.id;
 
-      // Update DB if there is a change
-      if (status && txn.status !== status) {
-        txn.status = status === 'success' ? 'success' : status === 'failed' ? 'failed' : txn.status;
+      if (status === 'success' && txn.status !== 'success') {
+        txn.status = 'success';
+        txn.providerTransactionId = providerId;
+        await txn.save();
+
+        // Create tickets if not already created
+        const existingTickets = await Ticket.find({ transactionId: txn._id });
+        
+        if (existingTickets.length === 0) {
+          // Decrement tickets
+          await Event.findByIdAndUpdate(txn.eventId, {
+            $inc: { ticketsAvailable: -txn.ticketCount }
+          });
+
+          // Create tickets
+          for (let i = 0; i < txn.ticketCount; i++) {
+            try {
+              const ticketId = generateTicketId();
+              const ticketData = {
+                eventId: txn.eventId,
+                attendeeId: txn.userId,
+                ticketId,
+                transactionId: txn._id,
+              };
+
+              const qrCodePath = await generateAndSaveQRCode(ticketData, ticketId);
+
+              await Ticket.create({
+                ticketId,
+                eventId: txn.eventId,
+                attendeeId: txn.userId,
+                transactionId: txn._id,
+                qrCodePath,
+              });
+
+              console.log(`Ticket ${ticketId} created via verify endpoint`);
+            } catch (ticketError) {
+              console.error(`Error creating ticket ${i + 1}:`, ticketError);
+            }
+          }
+
+          // Add to attendee registered events
+          try {
+            const attendee = await Attendee.findById(txn.userId);
+            if (attendee) {
+              const already = attendee.registeredEvents.some(
+                (r) => r.event.toString() === String(txn.eventId)
+              );
+              if (!already) {
+                attendee.registeredEvents.push({
+                  event: txn.eventId,
+                  registrationDate: new Date(),
+                  status: 'registered',
+                });
+                await attendee.save();
+              }
+            }
+          } catch (_) {}
+        }
+      } else if (status && txn.status !== 'success') {
+        txn.status = status === 'failed' ? 'failed' : txn.status;
         txn.providerTransactionId = providerId || txn.providerTransactionId;
         await txn.save();
       }
     } catch (err) {
-      // If Paystack verify fails (e.g., network), we still return current DB state
       console.warn('On-demand verify failed:', err.response?.data || err.message);
     }
 
-    // Re-fetch latest
     txn = await Transaction.findOne({ reference });
 
     return res.json({
