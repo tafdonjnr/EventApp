@@ -80,14 +80,14 @@ router.post('/:ticketId/use', verifyToken, async (req, res) => {
     const { ticketId } = req.params;
     
     // Check if user is organizer of the event
-    const ticket = await Ticket.findOne({ ticketId }).populate('eventId', 'organizerId');
+    const ticket = await Ticket.findOne({ ticketId }).populate('eventId', 'organizer');
     
     if (!ticket) {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
     // Verify the user is the organizer of this event
-    if (ticket.eventId.organizerId.toString() !== req.userId) {
+    if (ticket.eventId.organizer.toString() !== req.userId) {
       return res.status(403).json({ success: false, message: 'Only event organizer can mark tickets as used' });
     }
 
