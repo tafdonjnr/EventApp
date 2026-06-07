@@ -10,7 +10,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// ✅ Multer config
+// Multer config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
@@ -23,6 +23,8 @@ const upload = multer({ storage, fileFilter });
 
 /* ============================
    GET /api/organizers/analytics
+   Returns platform-wide stats for the authenticated organizer plus
+   a perEventStats array with per-event sold/remaining/revenue breakdown
 ============================ */
 router.get('/analytics', verifyToken, async (req, res) => {
   try {
@@ -41,9 +43,12 @@ router.get('/analytics', verifyToken, async (req, res) => {
     const totalRevenue = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
     const ticketsSold = transactions.reduce((sum, t) => sum + (t.ticketCount || 0), 0);
 
+    // Revenue over time — last 30 days, one entry per day
     const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentTx = transactions.filter((t) => t.createdAt && new Date(t.createdAt) >= thirtyDaysAgo);
+    const recentTx = transactions.filter(
+      (t) => t.createdAt && new Date(t.createdAt) >= thirtyDaysAgo
+    );
     const byDate = {};
     for (let d = 0; d <= 30; d++) {
       const date = new Date(thirtyDaysAgo);
@@ -58,12 +63,38 @@ router.get('/analytics', verifyToken, async (req, res) => {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, amount]) => ({ date, amount }));
 
+    // Per-event breakdown — uses ticketsSold field added to Event model
+    // ticketsSold is incremented by the webhook/verify handlers on each successful payment
+    // totalCapacity is set at event creation and never mutated
+    // estimatedGross = ticketsSold * price (accurate for single-tier events)
+    const perEventStats = events.map((e) => ({
+      _id: e._id,
+      title: e.title,
+      date: e.date,
+      venue: e.venue,
+      category: e.category,
+      price: e.price || 0,
+      totalCapacity: e.totalCapacity || 0,
+      ticketsSold: e.ticketsSold || 0,
+      ticketsRemaining: e.ticketsAvailable || 0,
+      estimatedGross: (e.ticketsSold || 0) * (e.price || 0),
+      // Sell-through rate per event: 0 if totalCapacity not set (pre-migration events)
+      sellThroughRate:
+        e.totalCapacity > 0
+          ? Math.round(((e.ticketsSold || 0) / e.totalCapacity) * 100)
+          : null,
+      isFree: !e.price || e.price === 0,
+      isPast: new Date(e.date) <= now,
+    }));
+
     res.json({
       totalEvents: events.length,
       ticketsSold,
       totalRevenue,
       upcomingEvents: upcomingEvents.length,
       revenueOverTime,
+      // New field — per-event breakdown for earnings screen
+      perEventStats,
     });
   } catch (err) {
     console.error('Analytics error:', err);
@@ -73,10 +104,14 @@ router.get('/analytics', verifyToken, async (req, res) => {
 
 /* ============================
    GET /api/organizers/dashboard
+   Returns organizer profile + events list
+   Events now include ticketsSold and totalCapacity fields
 ============================ */
 router.get('/dashboard', verifyToken, async (req, res) => {
   try {
-    const organizer = await Organizer.findById(req.organizerId).select('name orgName email logo twitter instagram bio');
+    const organizer = await Organizer.findById(req.organizerId).select(
+      'name orgName email logo twitter instagram bio'
+    );
     if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
 
     const events = await Event.find({ organizer: req.organizerId });
@@ -89,9 +124,10 @@ router.get('/dashboard', verifyToken, async (req, res) => {
         logo: organizer.logo,
         twitter: organizer.twitter,
         instagram: organizer.instagram,
-        bio: organizer.bio
+        bio: organizer.bio,
       },
-      events
+      // Events now include ticketsSold and totalCapacity from updated Event model
+      events,
     });
   } catch (error) {
     console.error('Dashboard error:', error);
@@ -101,7 +137,7 @@ router.get('/dashboard', verifyToken, async (req, res) => {
 
 /* ============================
    PATCH /api/organizers/profile
-   ✅ Updates fields and replaces old logo
+   Updates profile fields and replaces old logo file
 ============================ */
 router.patch('/profile', verifyToken, upload.single('logo'), async (req, res) => {
   const { name, orgName, email, twitter, instagram } = req.body;
@@ -110,19 +146,18 @@ router.patch('/profile', verifyToken, upload.single('logo'), async (req, res) =>
     const organizer = await Organizer.findById(req.organizerId);
     if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
 
-    // Update fields
     if (name !== undefined) organizer.name = name;
     if (orgName !== undefined) organizer.orgName = orgName;
     if (email !== undefined) organizer.email = email;
     if (twitter !== undefined) organizer.twitter = twitter;
     if (instagram !== undefined) organizer.instagram = instagram;
 
-    // ✅ Replace old logo
+    // Replace old logo file on disk if a new one is uploaded
     if (req.file) {
       if (organizer.logo && organizer.logo.startsWith('/uploads/')) {
         const oldPath = path.join(__dirname, '..', organizer.logo);
         fs.unlink(oldPath, (err) => {
-          if (err) console.warn('⚠️ Failed to delete old logo:', err.message);
+          if (err) console.warn('Failed to delete old logo:', err.message);
         });
       }
       organizer.logo = `/uploads/${req.file.filename}`;
@@ -139,11 +174,11 @@ router.patch('/profile', verifyToken, upload.single('logo'), async (req, res) =>
         logo: organizer.logo,
         twitter: organizer.twitter,
         instagram: organizer.instagram,
-        bio: organizer.bio
-      }
+        bio: organizer.bio,
+      },
     });
   } catch (err) {
-    console.error('🔥 Profile update error:', err);
+    console.error('Profile update error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -177,14 +212,13 @@ router.post('/login', async (req, res) => {
         email: organizer.email,
         logo: organizer.logo,
         role: 'organizer',
-      }
+      },
     });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 // REMOVE this — it doesn't update anything
 // router.post('/profile', upload.single('logo'), async (req, res) => {

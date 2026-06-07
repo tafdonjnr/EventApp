@@ -34,7 +34,7 @@ function generateTicketId() {
   return `TKT_${Date.now()}_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 }
 
-// Generate QR code
+// Generate QR code and upload to Cloudinary
 async function generateAndSaveQRCode(ticketData, ticketId) {
   try {
     const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(ticketData), {
@@ -44,7 +44,6 @@ async function generateAndSaveQRCode(ticketData, ticketId) {
       margin: 1,
     });
 
-    // Upload to Cloudinary
     const cloudinary = require('cloudinary').v2;
     const uploadRes = await cloudinary.uploader.upload(qrCodeDataURL, {
       folder: 'verse/qrcodes',
@@ -60,8 +59,7 @@ async function generateAndSaveQRCode(ticketData, ticketId) {
   }
 }
 
-
-// Send ticket email with QR code attachment - COMMENTED OUT FOR DEV
+// Send ticket email — COMMENTED OUT FOR DEV
 // async function sendTicketEmail(attendeeEmail, eventTitle, ticketId, qrCodePath) {
 //   try {
 //     const transporter = nodemailer.createTransport({
@@ -71,9 +69,7 @@ async function generateAndSaveQRCode(ticketData, ticketId) {
 //         pass: process.env.EMAIL_PASS
 //       }
 //     });
-
 //     const qrCodeFullPath = path.join(__dirname, 'tickets', qrCodePath);
-    
 //     await transporter.sendMail({
 //       from: `"EventApp" <${process.env.EMAIL_USER}>`,
 //       to: attendeeEmail,
@@ -82,20 +78,16 @@ async function generateAndSaveQRCode(ticketData, ticketId) {
 //         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
 //           <h2 style="color: #333;">🎫 Your Event Ticket</h2>
 //           <p>Thank you for your purchase! Your ticket has been successfully generated.</p>
-//           
 //           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
 //             <h3 style="margin-top: 0; color: #495057;">Event Details</h3>
 //             <p><strong>Event:</strong> ${eventTitle}</p>
 //             <p><strong>Ticket ID:</strong> ${ticketId}</p>
 //             <p><strong>Purchase Date:</strong> ${new Date().toLocaleDateString()}</p>
 //           </div>
-//           
 //           <p>Please present this QR code at the event entrance. Keep it safe!</p>
-//           
-//           <div style="style="text-align: center; margin: 30px 0;">
+//           <div style="text-align: center; margin: 30px 0;">
 //             <img src="cid:qr-code" alt="QR Code" style="max-width: 200px; border: 2px solid #ddd; border-radius: 8px;" />
 //           </div>
-//           
 //           <p style="color: #6c757d; font-size: 14px;">
 //             If you have any questions, please contact the event organizer.
 //           </p>
@@ -109,15 +101,14 @@ async function generateAndSaveQRCode(ticketData, ticketId) {
 //         }
 //       ]
 //     });
-    
 //     console.log(`Ticket email sent successfully to ${attendeeEmail}`);
 //     return true;
 //   } catch (error) {
 //     console.error('Error sending ticket email:', error);
 //     throw new Error('Failed to send ticket email');
-//     }
 //   }
 // }
+
 
 // POST /api/payments/initiate
 // Requires auth; body: { eventId, ticketCount }
@@ -193,8 +184,10 @@ router.post('/initiate', verifyToken, async (req, res) => {
   }
 });
 
-// Paystack requires raw body to compute signature
-// This route should be mounted with express.raw in server/index.js
+
+// POST /api/payments/webhook
+// Called by Paystack servers only — HMAC-SHA512 signature verified
+// express.raw() middleware must be set for this route in index.js
 router.post('/webhook', async (req, res) => {
   try {
     const signature = req.headers['x-paystack-signature'];
@@ -203,7 +196,7 @@ router.post('/webhook', async (req, res) => {
 
     const hash = crypto
       .createHmac('sha512', secret)
-      .update(req.rawBody) // set in index.js
+      .update(req.rawBody)
       .digest('hex');
 
     const isValid = hash === signature;
@@ -211,9 +204,8 @@ router.post('/webhook', async (req, res) => {
     const reference = parsed?.data?.reference;
     const eventType = parsed?.event;
 
-    // Log webhook for debugging
     console.log('Webhook received:', { eventType, reference, isValid });
-    
+
     await WebhookLog.create({
       headers: req.headers,
       rawBody: req.rawBody,
@@ -233,7 +225,7 @@ router.post('/webhook', async (req, res) => {
     const txn = await Transaction.findOne({ reference });
     if (!txn) return res.status(200).send('ok');
 
-    // Verify transaction with Paystack to be safe
+    // Verify with Paystack to confirm status
     const verifyRes = await axios.get(
       `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
       {
@@ -245,7 +237,7 @@ router.post('/webhook', async (req, res) => {
     const providerId = verifyRes.data?.data?.id;
 
     if (status === 'success') {
-      // Idempotency: only process success side-effects once
+      // Idempotency: only run side-effects once
       const wasSuccessful = txn.status === 'success';
       txn.status = 'success';
       txn.providerTransactionId = providerId;
@@ -253,79 +245,82 @@ router.post('/webhook', async (req, res) => {
       await txn.save();
 
       if (!wasSuccessful) {
-        // Decrement tickets atomically
+        // Decrement available tickets AND increment ticketsSold atomically
+        // ticketsSold tracks running sold count for per-event analytics
         await Event.findByIdAndUpdate(txn.eventId, {
-          $inc: { ticketsAvailable: -txn.ticketCount }
+          $inc: {
+            ticketsAvailable: -txn.ticketCount,
+            ticketsSold: txn.ticketCount,
+          },
         });
 
-        // Get the actual event details for the email
+        // Get event details for ticket creation
         const eventDoc = await Event.findById(txn.eventId);
 
-        // Create tickets for each purchased ticket
+        // Create one ticket per purchased ticket count
         console.log(`Creating ${txn.ticketCount} tickets for transaction ${txn._id}`);
-        
+
         for (let i = 0; i < txn.ticketCount; i++) {
           try {
-            // Generate unique ticket ID
             const ticketId = generateTicketId();
-            
-            // Create ticket data for QR code
+
             const ticketData = {
               eventId: txn.eventId,
               attendeeId: txn.userId,
               ticketId: ticketId,
-              transactionId: txn._id
+              transactionId: txn._id,
             };
 
-            // Generate QR code and save as PNG file
             const qrCodePath = await generateAndSaveQRCode(ticketData, ticketId);
-            
-            // Save ticket to database
+
             const savedTicket = await Ticket.create({
               ticketId: ticketId,
               eventId: txn.eventId,
               attendeeId: txn.userId,
               transactionId: txn._id,
-              qrCodePath: qrCodePath
+              qrCodePath: qrCodePath,
             });
-            
+
             console.log(`Ticket ${ticketId} created successfully`);
           } catch (ticketError) {
             console.error(`Error creating ticket ${i + 1}:`, ticketError);
-            // Continue with other tickets even if one fails
+            // Continue with remaining tickets even if one fails
           }
         }
 
-        // Send ticket email (only once, not per ticket) - COMMENTED OUT FOR DEV
+        // Send ticket email — COMMENTED OUT FOR DEV
         // try {
         //   const attendee = await Attendee.findById(txn.userId).select('email');
         //   if (attendee && attendee.email) {
-        //     // Get the first ticket for email attachment
-        //     const firstTicket = await Ticket.findOne({ 
-        //       transactionId: txn._id 
+        //     const firstTicket = await Ticket.findOne({
+        //       transactionId: txn._id
         //     }).sort({ createdAt: 1 });
-        //     
         //     if (firstTicket) {
         //       await sendTicketEmail(
-        //         attendee.email, 
-        //         eventDoc.title, 
-        //         firstTicket.ticketId, 
+        //         attendee.email,
+        //         eventDoc.title,
+        //         firstTicket.ticketId,
         //         firstTicket.qrCodePath
         //       );
         //     }
         //   }
         // } catch (emailError) {
         //   console.error("Error sending ticket email:", emailError);
-        //   // Don't fail the entire transaction if email fails
         // }
 
-        // Add event to attendee's registered events if not already there
+        // Add event to attendee's registered events if not already present
         try {
           const attendee = await Attendee.findById(txn.userId);
           if (attendee) {
-            const already = attendee.registeredEvents.some((r) => r.event.toString() === String(txn.eventId));
+            const already = attendee.registeredEvents.some(
+              (r) => r.event.toString() === String(txn.eventId)
+            );
             if (!already) {
-              attendee.registeredEvents.push({ event: txn.eventId, registrationDate: new Date(), status: 'registered' });
+              attendee.registeredEvents.push({
+                event: txn.eventId,
+                registrationDate: new Date(),
+                status: 'registered',
+              });
               await attendee.save();
             }
           }
@@ -338,7 +333,7 @@ router.post('/webhook', async (req, res) => {
       await txn.save();
     }
 
-    // mark log handled
+    // Mark webhook log as handled
     await WebhookLog.updateMany({ reference }, { $set: { handled: true } });
     return res.status(200).send('ok');
   } catch (err) {
@@ -347,7 +342,10 @@ router.post('/webhook', async (req, res) => {
   }
 });
 
-// Optional: Lookup by reference to show result screen
+
+// GET /api/payments/verify/:reference
+// Poll transaction status — queries both local DB and Paystack
+// Also creates tickets if webhook was missed and payment succeeded
 router.get('/verify/:reference', async (req, res) => {
   try {
     const { reference } = req.params;
@@ -367,13 +365,17 @@ router.get('/verify/:reference', async (req, res) => {
         txn.providerTransactionId = providerId;
         await txn.save();
 
-        // Create tickets if not already created
+        // Check if tickets were already created by the webhook
         const existingTickets = await Ticket.find({ transactionId: txn._id });
-        
+
         if (existingTickets.length === 0) {
-          // Decrement tickets
+          // Webhook was missed — handle side effects here as fallback
+          // Decrement available tickets AND increment ticketsSold
           await Event.findByIdAndUpdate(txn.eventId, {
-            $inc: { ticketsAvailable: -txn.ticketCount }
+            $inc: {
+              ticketsAvailable: -txn.ticketCount,
+              ticketsSold: txn.ticketCount,
+            },
           });
 
           // Create tickets
@@ -448,11 +450,15 @@ router.get('/verify/:reference', async (req, res) => {
   }
 });
 
-// Manual organizer verify endpoint for dashboard tools
+
+// POST /api/payments/manual-verify
+// Diagnostic tool — resyncs transaction status from Paystack
+// Does NOT trigger ticket creation side effects
 router.post('/manual-verify', async (req, res) => {
   try {
     const { reference } = req.body;
     if (!reference) return res.status(400).json({ message: 'reference required' });
+
     const verifyRes = await axios.get(
       `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
       { headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` } }
@@ -478,7 +484,6 @@ router.post('/manual-verify', async (req, res) => {
     return res.status(500).json({ message: 'Manual verify failed' });
   }
 });
-
 
 
 module.exports = router;

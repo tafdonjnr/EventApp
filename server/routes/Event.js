@@ -32,9 +32,11 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
   console.log('Request body:', req.body);
   console.log('Request file:', req.file);
   console.log('Organizer ID:', req.organizerId);
-  
+
   try {
     const { title, description, date, venue, price, ticketsAvailable, category } = req.body;
+
+    const parsedTickets = parseInt(ticketsAvailable);
 
     const eventData = {
       title,
@@ -42,14 +44,16 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
       date,
       venue,
       price: parseFloat(price),
-      ticketsAvailable: parseInt(ticketsAvailable),
+      ticketsAvailable: parsedTickets,
+      // totalCapacity is set once at creation and never mutated
+      // used to calculate sell-through rate: ticketsSold / totalCapacity
+      totalCapacity: parsedTickets,
       category,
       organizer: req.organizerId,
     };
 
     console.log('Event data to save:', eventData);
 
-    // Add banner path if file was uploaded
     if (req.file) {
       eventData.banner = req.file.path;
       console.log('Banner path added:', eventData.banner);
@@ -57,7 +61,7 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
 
     const event = new Event(eventData);
     const newEvent = await event.save();
-    
+
     console.log('Event saved successfully:', newEvent._id);
     res.status(201).json(newEvent);
   } catch (err) {
@@ -81,7 +85,16 @@ router.put('/:id', protect, upload.single('banner'), async (req, res) => {
       category,
     };
 
-    // Add banner path if file was uploaded
+    // If ticketsAvailable is being updated (e.g. organizer increases capacity),
+    // keep totalCapacity in sync so sell-through rate stays accurate
+    if (ticketsAvailable !== undefined) {
+      const existing = await Event.findById(req.params.id).select('ticketsSold');
+      if (existing) {
+        // New capacity = whatever organizer sets + tickets already sold
+        updateData.totalCapacity = parseInt(ticketsAvailable) + (existing.ticketsSold || 0);
+      }
+    }
+
     if (req.file) {
       updateData.banner = req.file.path;
     }
@@ -91,7 +104,7 @@ router.put('/:id', protect, upload.single('banner'), async (req, res) => {
       updateData,
       { new: true }
     );
-    
+
     if (!updatedEvent) return res.status(404).json({ message: 'Event not found' });
     res.json(updatedEvent);
   } catch (err) {
@@ -99,18 +112,17 @@ router.put('/:id', protect, upload.single('banner'), async (req, res) => {
   }
 });
 
-// Register for an event (attendee only)
+// Register for a free event (attendee only)
 router.post('/:id/register', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    
+
     if (!token) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // Verify token and get attendee ID
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     if (decoded.role !== 'attendee') {
       return res.status(403).json({ message: 'Only attendees can register for events' });
     }
@@ -118,7 +130,6 @@ router.post('/:id/register', async (req, res) => {
     const attendeeId = decoded.id;
     const eventId = req.params.id;
 
-    // Check if event exists and has available tickets
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -128,46 +139,45 @@ router.post('/:id/register', async (req, res) => {
       return res.status(400).json({ message: 'Event is sold out' });
     }
 
-    // Check if attendee is already registered
     const Attendee = require('../models/Attendee');
     const attendee = await Attendee.findById(attendeeId);
-    
+
     if (!attendee) {
       return res.status(404).json({ message: 'Attendee not found' });
     }
 
     const isAlreadyRegistered = attendee.registeredEvents.some(
-      reg => reg.event.toString() === eventId
+      (reg) => reg.event.toString() === eventId
     );
 
     if (isAlreadyRegistered) {
       return res.status(400).json({ message: 'Already registered for this event' });
     }
 
-    // Add event to attendee's registered events
     attendee.registeredEvents.push({
       event: eventId,
       registrationDate: new Date(),
-      status: 'registered'
+      status: 'registered',
     });
 
     await attendee.save();
 
-    // Decrease available tickets
+    // Decrement available tickets
+    // Note: free event registrations don't increment ticketsSold —
+    // ticketsSold is reserved for paid Paystack transactions only
     event.ticketsAvailable -= 1;
     await event.save();
 
-    res.json({ 
+    res.json({
       message: 'Successfully registered for event',
       event: {
         id: event._id,
         title: event.title,
         date: event.date,
         venue: event.venue,
-        price: event.price
-      }
+        price: event.price,
+      },
     });
-
   } catch (err) {
     if (err.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: 'Invalid token' });
@@ -184,12 +194,11 @@ router.post('/:id/register', async (req, res) => {
 router.delete('/:id', protect, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-    
+
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Check if the organizer owns this event
     if (event.organizer.toString() !== req.organizerId) {
       return res.status(403).json({ message: 'Not authorized to delete this event' });
     }
