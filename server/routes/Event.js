@@ -5,10 +5,12 @@ const protect = require('../middleware/auth');
 const upload = require('../multerConfig');
 const jwt = require('jsonwebtoken');
 
-// Get all events
+// Get all events — only future/current events for attendee feed
 router.get('/', async (req, res) => {
   try {
-    const events = await Event.find().populate('organizer', 'orgName');
+    const events = await Event.find({
+      date: { $gte: new Date() }
+    }).populate('organizer', 'orgName');
     res.json(events);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -45,8 +47,6 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
       venue,
       price: parseFloat(price),
       ticketsAvailable: parsedTickets,
-      // totalCapacity is set once at creation and never mutated
-      // used to calculate sell-through rate: ticketsSold / totalCapacity
       totalCapacity: parsedTickets,
       category,
       organizer: req.organizerId,
@@ -85,12 +85,9 @@ router.put('/:id', protect, upload.single('banner'), async (req, res) => {
       category,
     };
 
-    // If ticketsAvailable is being updated (e.g. organizer increases capacity),
-    // keep totalCapacity in sync so sell-through rate stays accurate
     if (ticketsAvailable !== undefined) {
       const existing = await Event.findById(req.params.id).select('ticketsSold');
       if (existing) {
-        // New capacity = whatever organizer sets + tickets already sold
         updateData.totalCapacity = parseInt(ticketsAvailable) + (existing.ticketsSold || 0);
       }
     }
@@ -162,9 +159,6 @@ router.post('/:id/register', async (req, res) => {
 
     await attendee.save();
 
-    // Decrement available tickets
-    // Note: free event registrations don't increment ticketsSold —
-    // ticketsSold is reserved for paid Paystack transactions only
     event.ticketsAvailable -= 1;
     await event.save();
 
