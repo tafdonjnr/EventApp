@@ -4,8 +4,7 @@ const router = express.Router();
 const axios = require('axios');
 const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
-const fs = require('fs').promises;
-const path = require('path');
+
 
 const verifyToken = require('../middleware/auth');
 const Transaction = require('../models/Transaction');
@@ -128,7 +127,9 @@ router.post('/initiate', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'Not enough tickets available' });
     }
 
-    const amount = Number(event.price) * Number(ticketCount);
+    const ticketPrice = Number(event.price);
+    const feePerTicket = ticketPrice > 0 ? 150 + Math.round(ticketPrice * 0.03) : 0;
+    const amount = (ticketPrice + feePerTicket) * Number(ticketCount);
 
     // Try to fetch attendee email for Paystack
     let email = 'noemail@example.com';
