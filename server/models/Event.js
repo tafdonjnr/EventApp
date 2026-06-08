@@ -37,6 +37,22 @@ const eventSchema = new mongoose.Schema(
     },
     banner: String,
 
+    // Event lifecycle status
+    // draft   → created but not yet published (future use)
+    // live    → active, tickets on sale (default)
+    // cancelled → organizer cancelled, refunds triggered
+    // completed → event has passed (future use for payout cooldown)
+    status: {
+      type: String,
+      enum: ['draft', 'live', 'cancelled', 'completed'],
+      default: 'live',
+    },
+
+    // Set when organizer cancels — used for audit trail and attendee messaging
+    cancelledAt: {
+      type: Date,
+    },
+
     // ObjectId reference to the organizer who created this event
     organizer: {
       type: mongoose.Schema.Types.ObjectId,

@@ -9,7 +9,8 @@ const jwt = require('jsonwebtoken');
 router.get('/', async (req, res) => {
   try {
     const events = await Event.find({
-      date: { $gte: new Date() }
+      date: { $gte: new Date() },
+      status: { $ne: 'cancelled' },
     }).populate('organizer', 'orgName');
     res.json(events);
   } catch (err) {
@@ -201,6 +202,107 @@ router.delete('/:id', protect, async (req, res) => {
     res.json({ message: 'Event deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/events/:id/cancel
+// Organizer only — cancels event, triggers Paystack refunds for all paid tickets
+router.post('/:id/cancel', protect, async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    if (event.organizer.toString() !== req.organizerId) {
+      return res.status(403).json({ message: 'Not authorized to cancel this event' });
+    }
+
+    if (event.status === 'cancelled') {
+      return res.status(400).json({ message: 'Event is already cancelled' });
+    }
+
+    // Mark event as cancelled immediately — stops new ticket sales
+    event.status = 'cancelled';
+    event.cancelledAt = new Date();
+    await event.save();
+
+    // Find all successful transactions for this event
+    const Transaction = require('../models/Transaction');
+    const Ticket = require('../models/Ticket');
+    const Attendee = require('../models/Attendee');
+    const axios = require('axios');
+
+    const transactions = await Transaction.find({
+      eventId: event._id,
+      status: 'success',
+    });
+
+    let refundsTriggered = 0;
+    let refundsFailed = 0;
+    const refundErrors = [];
+
+    for (const txn of transactions) {
+      try {
+        // Trigger Paystack refund — full amount
+        if (txn.providerTransactionId) {
+          await axios.post(
+            'https://api.paystack.co/refund',
+            {
+              transaction: txn.providerTransactionId,
+              amount: Math.round(Number(txn.amount) * 100), // kobo
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+        }
+
+        // Update transaction status
+        txn.status = 'refunded';
+        await txn.save();
+
+        // Cancel all tickets on this transaction
+        await Ticket.updateMany(
+          { transactionId: txn._id },
+          { $set: { status: 'cancelled' } }
+        );
+
+        // Update attendee's registeredEvents status
+        await Attendee.updateOne(
+          {
+            _id: txn.userId,
+            'registeredEvents.event': event._id,
+          },
+          {
+            $set: { 'registeredEvents.$.status': 'cancelled' },
+          }
+        );
+
+        refundsTriggered++;
+      } catch (refundErr) {
+        console.error(`Refund failed for transaction ${txn._id}:`, refundErr.response?.data || refundErr.message);
+        refundsFailed++;
+        refundErrors.push({
+          transactionId: txn._id,
+          error: refundErr.response?.data?.message || refundErr.message,
+        });
+      }
+    }
+
+    return res.json({
+      message: 'Event cancelled successfully',
+      refundsTriggered,
+      refundsFailed,
+      refundErrors: refundErrors.length > 0 ? refundErrors : undefined,
+    });
+  } catch (err) {
+    console.error('Cancel event error:', err);
+    return res.status(500).json({ message: err.message });
   }
 });
 
