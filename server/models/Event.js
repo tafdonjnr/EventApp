@@ -38,8 +38,8 @@ const eventSchema = new mongoose.Schema(
     banner: String,
 
     // Event lifecycle status
-    // draft   → created but not yet published (future use)
-    // live    → active, tickets on sale (default)
+    // draft     → created but not yet published (future use)
+    // live      → active, tickets on sale (default)
     // cancelled → organizer cancelled, refunds triggered
     // completed → event has passed (future use for payout cooldown)
     status: {
@@ -62,5 +62,16 @@ const eventSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// organizer — most common query: fetch all events for a given organizer
+// dashboard, analytics, and events list all filter by organizer
+eventSchema.index({ organizer: 1 });
+
+// date + status compound — public event listing filters by date and status
+// GET /api/events: { date: { $gte: now }, status: { $ne: 'cancelled' } }
+eventSchema.index({ date: 1, status: 1 });
+
+// category — attendee home screen filters by category
+eventSchema.index({ category: 1 });
 
 module.exports = mongoose.model('Event', eventSchema);
