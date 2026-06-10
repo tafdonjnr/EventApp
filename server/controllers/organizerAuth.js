@@ -1,13 +1,26 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const Organizer = require('../models/Organizer');
+const { sendOTP } = require('../utils/mailer');
 
-// Generate JWT token (role from DB: 'organizer' or 'admin')
+// Generate JWT token
 const genToken = (id, role = 'organizer') =>
   jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-// REGISTER controller — only creates organizer accounts unless adminKey matches
+// Helper — generate and store a hashed OTP on a user document
+async function attachOTP(user) {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const hashed = await bcrypt.hash(code, 10);
+  user.otpCode = hashed;
+  user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  await user.save();
+  return code;
+}
+
+// POST /api/organizers/register
+// Creates account, sends OTP — does NOT return token yet
 exports.register = async (req, res) => {
-  console.log("REGISTER CONTROLLER HIT");
+  console.log('REGISTER CONTROLLER HIT');
   const { name, email, password, bio, orgName, adminKey } = req.body;
 
   try {
@@ -16,22 +29,25 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email already used' });
     }
 
-    // Optional backdoor: adminKey must match ADMIN_SECRET_KEY to create admin
+    // Only elevate to admin if correct adminKey provided
     let role = 'organizer';
-    if (adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY) {
+    if (
+      adminKey &&
+      process.env.ADMIN_SECRET_KEY &&
+      adminKey === process.env.ADMIN_SECRET_KEY
+    ) {
       role = 'admin';
     }
-    // Never accept role from req.body — only from adminKey check above
 
     const org = await Organizer.create({ name, email, password, bio, orgName, role });
 
+    // Generate OTP and send email
+    const code = await attachOTP(org);
+    await sendOTP({ to: email, code, name });
+
     res.status(201).json({
-      _id: org._id,
-      name: org.name,
-      email: org.email,
-      orgName: org.orgName,
-      role: org.role,
-      token: genToken(org._id, org.role),
+      message: 'OTP sent to your email',
+      email,
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -39,7 +55,8 @@ exports.register = async (req, res) => {
   }
 };
 
-// LOGIN controller
+// POST /api/organizers/login
+// Direct login — no OTP on login for pilot speed
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -63,8 +80,8 @@ exports.login = async (req, res) => {
         orgName: org.orgName,
         email: org.email,
         logo: org.logo,
-        role: 'organizer',
-      }
+        role: org.role,
+      },
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -72,10 +89,10 @@ exports.login = async (req, res) => {
   }
 };
 
-// ✅ UPDATE PROFILE controller
+// PATCH /api/organizers/profile
 exports.updateProfile = async (req, res) => {
   try {
-    const organizer = await Organizer.findById(req.organizerId); // from verifyToken
+    const organizer = await Organizer.findById(req.organizerId);
     if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
 
     organizer.name = req.body.name || organizer.name;
@@ -95,4 +112,3 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error while updating profile' });
   }
 };
-

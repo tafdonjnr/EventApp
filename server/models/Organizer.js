@@ -8,30 +8,23 @@
 const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
 
-/* -----------------------------  Schema  ----------------------------- */
 const organizerSchema = new mongoose.Schema(
   {
-    // Role of admin or organizer
     role: {
       type: String,
       enum: ['organizer', 'admin'],
-      default: 'organizer'
+      default: 'organizer',
     },
-    // Display name shown on public profile
     name: {
       type: String,
       required: true,
       trim: true,
     },
-
-    // Organization name
     orgName: {
       type: String,
       default: '',
       trim: true,
     },
-
-    // Login / contact e-mail (must be unique)
     email: {
       type: String,
       required: true,
@@ -39,66 +32,55 @@ const organizerSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-
-    // Hashed password (min length checked on creation)
     password: {
       type: String,
       required: true,
       minlength: 6,
     },
-
-    // Short bio or description shown on organizer profile
     bio: {
       type: String,
       default: '',
     },
-
-    // Optional profile/avatar image URL
     avatarUrl: {
       type: String,
       default: '',
     },
-
-    // Logo image path
     logo: {
       type: String,
       default: '',
     },
-
-    // Social media links
     twitter: {
       type: String,
       default: '',
       trim: true,
     },
-
     instagram: {
       type: String,
       default: '',
       trim: true,
     },
+
+    // OTP verification fields
+    // otpCode stores a bcrypt hash of the 6-digit code — never store plain OTP
+    // otpExpiresAt is checked on verify — codes expire after 10 minutes
+    // isVerified gates token issuance — unverified accounts cannot log in
+    otpCode:      { type: String },
+    otpExpiresAt: { type: Date },
+    isVerified:   { type: Boolean, default: false },
   },
-  {
-    timestamps: true,          // adds createdAt & updatedAt
-  }
+  { timestamps: true }
 );
 
-/* --------------------  Password-hashing middleware  ------------------ */
-/**
- * Before saving, hash the password IF it has been modified
- * (new doc or password change). Uses bcrypt with salt rounds = 10.
- */
+// Hash password before saving
 organizerSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();          // Skip if unchanged
-  this.password = await bcrypt.hash(this.password, 10);     // Hash and replace
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
-/* ---------------------  Instance method: compare pwd  ---------------- */
+// Compare plain password against stored hash
 organizerSchema.methods.matchPassword = function (enteredPwd) {
-  // Returns a boolean promise: true if passwords match
   return bcrypt.compare(enteredPwd, this.password);
 };
 
-/* -----------------------  Export the Mongoose model  ----------------- */
 module.exports = mongoose.model('Organizer', organizerSchema);

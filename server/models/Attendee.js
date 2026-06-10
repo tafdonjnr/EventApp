@@ -49,6 +49,14 @@ const attendeeSchema = new mongoose.Schema(
         default: 'registered',
       },
     }],
+
+    // OTP verification fields
+    // otpCode stores a bcrypt hash of the 6-digit code — never store plain OTP
+    // otpExpiresAt is checked on verify — codes expire after 10 minutes
+    // isVerified gates token issuance — unverified accounts cannot log in
+    otpCode:      { type: String },
+    otpExpiresAt: { type: Date },
+    isVerified:   { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -56,7 +64,6 @@ const attendeeSchema = new mongoose.Schema(
 // Hash password before saving
 attendeeSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -66,9 +73,9 @@ attendeeSchema.pre('save', async function (next) {
   }
 });
 
-// Method to compare passwords
+// Compare plain password against stored hash
 attendeeSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('Attendee', attendeeSchema); 
+module.exports = mongoose.model('Attendee', attendeeSchema);

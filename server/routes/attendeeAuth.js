@@ -2,45 +2,41 @@ const express = require('express');
 const router = express.Router();
 const Attendee = require('../models/Attendee');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const verifyToken = require('../middleware/auth');
+const { sendOTP } = require('../utils/mailer');
 
-// Register new attendee
+// Helper — generate and store a hashed OTP on a user document
+async function attachOTP(user) {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const hashed = await bcrypt.hash(code, 10);
+  user.otpCode = hashed;
+  user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  await user.save();
+  return code; // return plain code for sending in email
+}
+
+// POST /api/attendees/register
+// Creates account, sends OTP — does NOT return token yet
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    // Check if attendee already exists
     const existingAttendee = await Attendee.findOne({ email });
     if (existingAttendee) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Create new attendee
-    const attendee = new Attendee({
-      name,
-      email,
-      password,
-      phone,
-    });
-
+    const attendee = new Attendee({ name, email, password, phone });
     await attendee.save();
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: attendee._id, role: 'attendee' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Generate OTP and send email
+    const code = await attachOTP(attendee);
+    await sendOTP({ to: email, code, name });
 
     res.status(201).json({
-      message: 'Attendee registered successfully',
-      token,
-      attendee: {
-        id: attendee._id,
-        name: attendee.name,
-        email: attendee.email,
-        phone: attendee.phone,
-      },
+      message: 'OTP sent to your email',
+      email,
     });
   } catch (error) {
     console.error('Attendee registration error:', error);
@@ -48,24 +44,22 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login attendee
+// POST /api/attendees/login
+// Login is direct — no OTP on login for pilot speed
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find attendee by email
     const attendee = await Attendee.findOne({ email });
     if (!attendee) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check password
     const isMatch = await attendee.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { id: attendee._id, role: 'attendee' },
       process.env.JWT_SECRET,
@@ -88,11 +82,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get attendee profile (protected)
+// GET /api/attendees/profile (protected)
 router.get('/profile', verifyToken, async (req, res) => {
   try {
     const attendee = await Attendee.findById(req.attendeeId)
-      .select('-password')
+      .select('-password -otpCode -otpExpiresAt')
       .populate('registeredEvents.event');
 
     if (!attendee) {
@@ -106,7 +100,7 @@ router.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
-// Update attendee profile (protected)
+// PATCH /api/attendees/profile (protected)
 router.patch('/profile', verifyToken, async (req, res) => {
   try {
     const { name, phone, preferences } = req.body;
@@ -116,10 +110,11 @@ router.patch('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Attendee not found' });
     }
 
-    // Update fields
     if (name !== undefined) attendee.name = name;
     if (phone !== undefined) attendee.phone = phone;
-    if (preferences !== undefined) attendee.preferences = { ...attendee.preferences, ...preferences };
+    if (preferences !== undefined) {
+      attendee.preferences = { ...attendee.preferences, ...preferences };
+    }
 
     await attendee.save();
 
@@ -139,4 +134,4 @@ router.patch('/profile', verifyToken, async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

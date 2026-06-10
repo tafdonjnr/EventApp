@@ -75,6 +75,7 @@ let attendeeAuthRoutes;
 let paymentRoutes;
 let ticketRoutes;
 let adminRoutes;
+let authRoutes;
 try {
   organizerAuthRoutes = require('./routes/organizerAuth');
   organizerRoutes = require('./routes/organizers');
@@ -83,11 +84,13 @@ try {
   paymentRoutes = require('./routes/payments');
   ticketRoutes = require('./routes/tickets');
   adminRoutes = require('./routes/admin');
+  authRoutes = require('./routes/auth');
 } catch (err) {
   fatal('Failed loading route modules', err);
 }
 
 app.use('/api/organizers', organizerAuthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/organizers', organizerRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/attendees', attendeeAuthRoutes);
