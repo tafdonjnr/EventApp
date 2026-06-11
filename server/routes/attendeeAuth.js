@@ -2,22 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Attendee = require('../models/Attendee');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const verifyToken = require('../middleware/auth');
-const { sendOTP } = require('../utils/mailer');
-
-// Helper — generate and store a hashed OTP on a user document
-async function attachOTP(user) {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const hashed = await bcrypt.hash(code, 10);
-  user.otpCode = hashed;
-  user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-  await user.save();
-  return code; // return plain code for sending in email
-}
 
 // POST /api/attendees/register
-// Creates account, sends OTP — does NOT return token yet
+// Creates account and returns token immediately
+// OTP flow is built (utils/mailer.js, routes/auth.js) but disabled for pilot
+// To re-enable: call attachOTP(attendee) + sendOTP() here and return { message, email } instead
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
@@ -30,13 +20,21 @@ router.post('/register', async (req, res) => {
     const attendee = new Attendee({ name, email, password, phone });
     await attendee.save();
 
-    // Generate OTP and send email
-    const code = await attachOTP(attendee);
-    await sendOTP({ to: email, code, name });
+    const token = jwt.sign(
+      { id: attendee._id, role: 'attendee' },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     res.status(201).json({
-      message: 'OTP sent to your email',
-      email,
+      message: 'Account created successfully',
+      token,
+      attendee: {
+        id: attendee._id,
+        name: attendee.name,
+        email: attendee.email,
+        phone: attendee.phone,
+      },
     });
   } catch (error) {
     console.error('Attendee registration error:', error);
@@ -45,7 +43,6 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/attendees/login
-// Login is direct — no OTP on login for pilot speed
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;

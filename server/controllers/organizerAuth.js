@@ -1,24 +1,15 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const Organizer = require('../models/Organizer');
-const { sendOTP } = require('../utils/mailer');
 
 // Generate JWT token
 const genToken = (id, role = 'organizer') =>
   jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-// Helper — generate and store a hashed OTP on a user document
-async function attachOTP(user) {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const hashed = await bcrypt.hash(code, 10);
-  user.otpCode = hashed;
-  user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-  await user.save();
-  return code;
-}
-
 // POST /api/organizers/register
-// Creates account, sends OTP — does NOT return token yet
+// Creates account and returns token immediately
+// OTP flow is built (utils/mailer.js, routes/auth.js) but disabled for pilot
+// To re-enable: call attachOTP(org) + sendOTP() here and return { message, email } instead
 exports.register = async (req, res) => {
   console.log('REGISTER CONTROLLER HIT');
   const { name, email, password, bio, orgName, adminKey } = req.body;
@@ -41,13 +32,17 @@ exports.register = async (req, res) => {
 
     const org = await Organizer.create({ name, email, password, bio, orgName, role });
 
-    // Generate OTP and send email
-    const code = await attachOTP(org);
-    await sendOTP({ to: email, code, name });
-
     res.status(201).json({
-      message: 'OTP sent to your email',
-      email,
+      message: 'Account created successfully',
+      token: genToken(org._id, org.role),
+      organizer: {
+        id: org._id,
+        name: org.name,
+        orgName: org.orgName,
+        email: org.email,
+        logo: org.logo,
+        role: org.role,
+      },
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -56,7 +51,6 @@ exports.register = async (req, res) => {
 };
 
 // POST /api/organizers/login
-// Direct login — no OTP on login for pilot speed
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
