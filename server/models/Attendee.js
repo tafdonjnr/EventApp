@@ -24,8 +24,43 @@ const attendeeSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    profilePicture: {
+
+    // Extended profile fields
+    username: {
       type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true, // allows multiple null values without unique conflict
+      unique: true,
+    },
+    avatar: {
+      type: String, // Cloudinary URL
+      default: '',
+    },
+    bio: {
+      type: String,
+      default: '',
+      maxlength: 200,
+    },
+    dob: {
+      type: Date, // stored as full date, age derived on read
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'non-binary', 'prefer-not-to-say', ''],
+      default: '',
+    },
+    showAttendance: {
+      type: Boolean,
+      default: true, // whether other users can see what events they're attending
+    },
+    location: {
+      city: { type: String, default: 'Abuja' },
+      area: { type: String, default: '' }, // e.g. "Wuse", "Maitama"
+    },
+
+    profilePicture: {
+      type: String, // legacy field — superseded by avatar
     },
     preferences: {
       categories: [String],
@@ -50,10 +85,11 @@ const attendeeSchema = new mongoose.Schema(
       },
     }],
 
-    // OTP verification fields
-    // otpCode stores a bcrypt hash of the 6-digit code — never store plain OTP
-    // otpExpiresAt is checked on verify — codes expire after 10 minutes
-    // isVerified gates token issuance — unverified accounts cannot log in
+    // Social graph — populated in social system session
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' }],
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' }],
+
+    // OTP verification
     otpCode:      { type: String },
     otpExpiresAt: { type: Date },
     isVerified:   { type: Boolean, default: false },
@@ -61,7 +97,6 @@ const attendeeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Hash password before saving
 attendeeSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   try {
@@ -73,7 +108,6 @@ attendeeSchema.pre('save', async function (next) {
   }
 });
 
-// Compare plain password against stored hash
 attendeeSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };

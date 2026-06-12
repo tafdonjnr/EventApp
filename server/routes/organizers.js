@@ -4,27 +4,12 @@ const Organizer = require('../models/Organizer');
 const Event = require('../models/Event');
 const Transaction = require('../models/Transaction');
 const verifyToken = require('../middleware/auth');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
-// Multer config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
-const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/jpg'];
-  cb(null, allowed.includes(file.mimetype));
-};
-const upload = multer({ storage, fileFilter });
+const { uploadLogo } = require('../utils/cloudinary');
 
 /* ============================
    GET /api/organizers/analytics
-   Returns platform-wide stats for the authenticated organizer plus
-   a perEventStats array with per-event sold/remaining/revenue breakdown
 ============================ */
 router.get('/analytics', verifyToken, async (req, res) => {
   try {
@@ -43,7 +28,6 @@ router.get('/analytics', verifyToken, async (req, res) => {
     const totalRevenue = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
     const ticketsSold = transactions.reduce((sum, t) => sum + (t.ticketCount || 0), 0);
 
-    // Revenue over time — last 30 days, one entry per day
     const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentTx = transactions.filter(
@@ -63,10 +47,6 @@ router.get('/analytics', verifyToken, async (req, res) => {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, amount]) => ({ date, amount }));
 
-    // Per-event breakdown — uses ticketsSold field added to Event model
-    // ticketsSold is incremented by the webhook/verify handlers on each successful payment
-    // totalCapacity is set at event creation and never mutated
-    // estimatedGross = ticketsSold * price (accurate for single-tier events)
     const perEventStats = events.map((e) => ({
       _id: e._id,
       title: e.title,
@@ -78,7 +58,6 @@ router.get('/analytics', verifyToken, async (req, res) => {
       ticketsSold: e.ticketsSold || 0,
       ticketsRemaining: e.ticketsAvailable || 0,
       estimatedGross: (e.ticketsSold || 0) * (e.price || 0),
-      // Sell-through rate per event: 0 if totalCapacity not set (pre-migration events)
       sellThroughRate:
         e.totalCapacity > 0
           ? Math.round(((e.ticketsSold || 0) / e.totalCapacity) * 100)
@@ -93,7 +72,6 @@ router.get('/analytics', verifyToken, async (req, res) => {
       totalRevenue,
       upcomingEvents: upcomingEvents.length,
       revenueOverTime,
-      // New field — per-event breakdown for earnings screen
       perEventStats,
     });
   } catch (err) {
@@ -104,13 +82,11 @@ router.get('/analytics', verifyToken, async (req, res) => {
 
 /* ============================
    GET /api/organizers/dashboard
-   Returns organizer profile + events list
-   Events now include ticketsSold and totalCapacity fields
 ============================ */
 router.get('/dashboard', verifyToken, async (req, res) => {
   try {
     const organizer = await Organizer.findById(req.organizerId).select(
-      'name orgName email logo twitter instagram bio'
+      'name orgName email logo twitter instagram bio website'
     );
     if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
 
@@ -125,8 +101,8 @@ router.get('/dashboard', verifyToken, async (req, res) => {
         twitter: organizer.twitter,
         instagram: organizer.instagram,
         bio: organizer.bio,
+        website: organizer.website,
       },
-      // Events now include ticketsSold and totalCapacity from updated Event model
       events,
     });
   } catch (error) {
@@ -137,30 +113,26 @@ router.get('/dashboard', verifyToken, async (req, res) => {
 
 /* ============================
    PATCH /api/organizers/profile
-   Updates profile fields and replaces old logo file
+   Now uses Cloudinary — no local disk writes
 ============================ */
-router.patch('/profile', verifyToken, upload.single('logo'), async (req, res) => {
-  const { name, orgName, email, twitter, instagram } = req.body;
-
+router.patch('/profile', verifyToken, uploadLogo.single('logo'), async (req, res) => {
   try {
     const organizer = await Organizer.findById(req.organizerId);
     if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
 
-    if (name !== undefined) organizer.name = name;
-    if (orgName !== undefined) organizer.orgName = orgName;
-    if (email !== undefined) organizer.email = email;
-    if (twitter !== undefined) organizer.twitter = twitter;
-    if (instagram !== undefined) organizer.instagram = instagram;
+    const { name, orgName, email, twitter, instagram, bio, website } = req.body;
 
-    // Replace old logo file on disk if a new one is uploaded
+    if (name !== undefined)      organizer.name = name.trim();
+    if (orgName !== undefined)   organizer.orgName = orgName.trim();
+    if (email !== undefined)     organizer.email = email.trim().toLowerCase();
+    if (twitter !== undefined)   organizer.twitter = twitter.trim();
+    if (instagram !== undefined) organizer.instagram = instagram.trim();
+    if (bio !== undefined)       organizer.bio = bio.trim();
+    if (website !== undefined)   organizer.website = website.trim();
+
+    // Cloudinary URL is in req.file.path when upload succeeds
     if (req.file) {
-      if (organizer.logo && organizer.logo.startsWith('/uploads/')) {
-        const oldPath = path.join(__dirname, '..', organizer.logo);
-        fs.unlink(oldPath, (err) => {
-          if (err) console.warn('Failed to delete old logo:', err.message);
-        });
-      }
-      organizer.logo = `/uploads/${req.file.filename}`;
+      organizer.logo = req.file.path;
     }
 
     await organizer.save();
@@ -175,6 +147,7 @@ router.patch('/profile', verifyToken, upload.single('logo'), async (req, res) =>
         twitter: organizer.twitter,
         instagram: organizer.instagram,
         bio: organizer.bio,
+        website: organizer.website,
       },
     });
   } catch (err) {
@@ -188,7 +161,6 @@ router.patch('/profile', verifyToken, upload.single('logo'), async (req, res) =>
 ============================ */
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
   try {
     const organizer = await Organizer.findOne({ email });
     if (!organizer) return res.status(404).json({ message: 'Invalid credentials' });
@@ -219,17 +191,5 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
-// REMOVE this — it doesn't update anything
-// router.post('/profile', upload.single('logo'), async (req, res) => {
-//   try {
-//     console.log("Received profile update");
-//     console.log("Body:", req.body);
-//     console.log("File:", req.file);
-//   } catch (error) {
-//     console.error("Error saving profile:", error);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// });
 
 module.exports = router;
