@@ -124,19 +124,24 @@ router.patch(
         preferences,
       } = req.body;
 
-      if (name !== undefined)     attendee.name = name.trim();
-      if (phone !== undefined)    attendee.phone = phone.trim();
-      if (bio !== undefined)      attendee.bio = bio.trim();
-      if (gender !== undefined)   attendee.gender = gender;
+      if (name !== undefined)   attendee.name = name.trim();
+      if (phone !== undefined)  attendee.phone = phone.trim();
+      if (bio !== undefined)    attendee.bio = bio.trim();
+      if (gender !== undefined) attendee.gender = gender;
       if (dob !== undefined && dob) attendee.dob = new Date(dob);
       if (showAttendance !== undefined)
         attendee.showAttendance = showAttendance === 'true' || showAttendance === true;
 
-      // Location
-      if (locationCity !== undefined) attendee.location.city = locationCity;
-      if (locationArea !== undefined) attendee.location.area = locationArea;
+      // Location — guard against documents that predate this field
+      if (locationCity !== undefined || locationArea !== undefined) {
+        if (!attendee.location) {
+          attendee.location = { city: 'Abuja', area: '' };
+        }
+        if (locationCity !== undefined) attendee.location.city = locationCity;
+        if (locationArea !== undefined) attendee.location.area = locationArea;
+      }
 
-      // Username — enforce uniqueness manually for better error message
+      // Username — enforce uniqueness manually for a clearer error message
       if (username !== undefined && username.trim()) {
         const uname = username.trim().toLowerCase();
         const taken = await Attendee.findOne({
@@ -149,12 +154,19 @@ router.patch(
         attendee.username = uname;
       }
 
-      // Preferences
-      if (preferences !== undefined) {
-        const parsed = typeof preferences === 'string'
-          ? JSON.parse(preferences)
-          : preferences;
-        attendee.preferences = { ...attendee.preferences.toObject?.() ?? attendee.preferences, ...parsed };
+      // Preferences — guard against undefined/empty string from form-data
+      if (preferences !== undefined && preferences !== '') {
+        try {
+          const parsed = typeof preferences === 'string'
+            ? JSON.parse(preferences)
+            : preferences;
+          const current = attendee.preferences
+            ? (attendee.preferences.toObject ? attendee.preferences.toObject() : attendee.preferences)
+            : {};
+          attendee.preferences = { ...current, ...parsed };
+        } catch (parseErr) {
+          console.warn('Could not parse preferences JSON, skipping:', parseErr.message);
+        }
       }
 
       // Avatar — Cloudinary URL is in req.file.path when upload succeeds
@@ -183,9 +195,8 @@ router.patch(
       });
     } catch (error) {
       console.error('Update attendee profile error:', error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: error.message || 'Server error' });
     }
   }
 );
-
 module.exports = router;
