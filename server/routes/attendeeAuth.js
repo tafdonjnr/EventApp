@@ -103,8 +103,17 @@ router.get('/profile', verifyToken, async (req, res) => {
 router.patch(
   '/profile',
   verifyToken,
-  uploadAvatar.single('avatar'),
+  (req, res, next) => {
+    uploadAvatar.single('avatar')(req, res, (err) => {
+      if (err) {
+        console.error('Multer/Cloudinary error:', err.stack || err);
+        return res.status(500).json({ message: err.message || 'Upload failed' });
+      }
+      next();
+    });
+  },
   async (req, res) => {
+    console.log('PATCH /api/attendees/profile hit', req.body);
     try {
       const attendee = await Attendee.findById(req.attendeeId);
       if (!attendee) {
@@ -124,9 +133,9 @@ router.patch(
         preferences,
       } = req.body;
 
-      if (name !== undefined)   attendee.name = name.trim();
-      if (phone !== undefined)  attendee.phone = phone.trim();
-      if (bio !== undefined)    attendee.bio = bio.trim();
+      if (name !== undefined && name !== null) attendee.name = String(name).trim();
+      if (phone !== undefined && phone !== null) attendee.phone = String(phone).trim();
+      if (bio !== undefined && bio !== null) attendee.bio = String(bio).trim();
       if (gender !== undefined) attendee.gender = gender;
       if (dob !== undefined && dob) attendee.dob = new Date(dob);
       if (showAttendance !== undefined)
@@ -194,7 +203,7 @@ router.patch(
         },
       });
     } catch (error) {
-      console.error('Update attendee profile error:', error);
+      console.error('PATCH profile error:', error.stack || error);
       res.status(500).json({ message: error.message || 'Server error' });
     }
   }
