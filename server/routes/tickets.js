@@ -11,7 +11,14 @@ router.get('/my-tickets', verifyToken, async (req, res) => {
     const attendeeId = req.attendeeId || req.userId;
     
     const tickets = await Ticket.find({ attendeeId })
-      .populate('eventId', 'title date location')
+      .populate({
+        path: 'eventId',
+        select: 'title date venue',
+        populate: {
+          path: 'organizer',
+          select: 'orgName name logo',
+        },
+      })
       .populate('transactionId', 'amount currency createdAt')
       .sort({ createdAt: -1 });
 
@@ -21,7 +28,12 @@ router.get('/my-tickets', verifyToken, async (req, res) => {
         ticketId: ticket.ticketId,
         eventTitle: ticket.eventId?.title,
         eventDate: ticket.eventId?.date,
-        eventLocation: ticket.eventId?.location,
+        eventLocation: ticket.eventId?.venue,
+        organizerName:
+          ticket.eventId?.organizer?.orgName ||
+          ticket.eventId?.organizer?.name ||
+          null,
+        organizerLogo: ticket.eventId?.organizer?.logo || null,
         amount: ticket.transactionId?.amount,
         currency: ticket.transactionId?.currency,
         status: ticket.status,
@@ -43,7 +55,14 @@ router.get('/:ticketId', verifyToken, async (req, res) => {
     const attendeeId = req.attendeeId || req.userId;
     
     const ticket = await Ticket.findOne({ ticketId, attendeeId })
-      .populate('eventId', 'title date location description')
+      .populate({
+        path: 'eventId',
+        select: 'title date venue description',
+        populate: {
+          path: 'organizer',
+          select: 'orgName name logo',
+        },
+      })
       .populate('transactionId', 'amount currency createdAt')
       .populate('attendeeId', 'name email');
 
@@ -57,8 +76,13 @@ router.get('/:ticketId', verifyToken, async (req, res) => {
         ticketId: ticket.ticketId,
         eventTitle: ticket.eventId?.title,
         eventDate: ticket.eventId?.date,
-        eventLocation: ticket.eventId?.location,
+        eventLocation: ticket.eventId?.venue,
         eventDescription: ticket.eventId?.description,
+        organizerName:
+          ticket.eventId?.organizer?.orgName ||
+          ticket.eventId?.organizer?.name ||
+          null,
+        organizerLogo: ticket.eventId?.organizer?.logo || null,
         attendeeName: ticket.attendeeId?.name,
         attendeeEmail: ticket.attendeeId?.email,
         amount: ticket.transactionId?.amount,
