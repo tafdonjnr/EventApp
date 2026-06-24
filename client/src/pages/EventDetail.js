@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getImageUrl, API_BASE_URL, getAuthToken } from '../config/api';
 import LoadingState from '../components/LoadingState';
+import { getCategoryLabel } from '../utils/categories';
 
 export default function EventDetail() {
   const [event, setEvent] = useState(null);
@@ -138,7 +139,7 @@ export default function EventDetail() {
             <div className="card-standard">
               <div className="small-text uppercase tracking-wider text-mutedText mb-1">Category</div>
               <div className="body-text font-semibold">
-                <span className="inline-block px-3 py-1 rounded-full bg-primaryStart/20 text-primaryText text-sm font-semibold uppercase">{event.category}</span>
+                <span className="inline-block px-3 py-1 rounded-full bg-primaryStart/20 text-primaryText text-sm font-semibold uppercase">{getCategoryLabel(event.category)}</span>
               </div>
             </div>
             <div className="card-standard">

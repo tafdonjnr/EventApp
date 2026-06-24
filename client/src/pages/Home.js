@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getImageUrl, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
 import EmptyState, { EmptyStates } from '../components/EmptyState';
+import { getCategoryLabel } from '../utils/categories';
 
 function Home() {
   const [events, setEvents] = useState([]);
@@ -91,7 +92,7 @@ function Home() {
                     <p className="small-text">📍 {event.venue}</p>
                     <p className="small-text font-semibold text-green-600">💰 ${event.price}</p>
                     <p className="small-text">🎫 {event.ticketsAvailable} tickets available</p>
-                    <p className="small-text">🏷️ {event.category?.charAt(0).toUpperCase() + event.category?.slice(1)}</p>
+                    <p className="small-text">🏷️ {getCategoryLabel(event.category)}</p>
                   </div>
                   <p className="body-text small-text flex-1 mb-4">
                     {event.description?.length > 100 ? `${event.description.substring(0, 100)}...` : event.description}

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getImageUrl, API_BASE_URL, getAuthToken } from '../../config/api';
 import LoadingState from '../../components/LoadingState';
 import EmptyState, { EmptyStates } from '../../components/EmptyState';
+import { getCategoryLabel } from '../../utils/categories';
 
 const MyEvents = () => {
   const [events, setEvents] = useState([]);
@@ -122,7 +123,7 @@ const MyEvents = () => {
                   <p><strong>Venue:</strong> {ev.venue}</p>
                   <p><strong>Price:</strong> ${ev.price}</p>
                   <p><strong>Tickets:</strong> {ev.ticketsAvailable} available</p>
-                  <p><strong>Category:</strong> {ev.category}</p>
+                  <p><strong>Category:</strong> {getCategoryLabel(ev.category)}</p>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <button

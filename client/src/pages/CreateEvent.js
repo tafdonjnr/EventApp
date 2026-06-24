@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getImageUrl, getAuthToken, API_BASE_URL } from '../config/api';
 import LoadingState from '../components/LoadingState';
 import Stepper, { Step } from '../components/Stepper';
+import { CATEGORY_OPTIONS, normalizeCategory } from '../utils/categories';
 
 export default function CreateEvent() {
   const [formData, setFormData] = useState({
@@ -42,7 +43,7 @@ export default function CreateEvent() {
           venue: event.venue || '',
           price: event.price || '',
           ticketsAvailable: event.ticketsAvailable || '',
-          category: event.category || 'general',
+          category: normalizeCategory(event.category),
         });
         if (event.banner) setBannerPreview(getImageUrl(event.banner));
       }
@@ -283,25 +284,19 @@ export default function CreateEvent() {
 
               <div>
                 <label className="block body-text font-semibold text-primaryText mb-2">Category *</label>
-               <select
-  name="category"
-  value={formData.category}
-  onChange={handleInputChange}
-  required
-  className="input-standard"
->
-  <option value="general">General</option>
-  <option value="festival">Festival</option>
-  <option value="concert">Concert</option>
-  <option value="color-festival">Color Festival</option>
-  <option value="funfair">Funfair</option>
-  <option value="rave">Rave / Party</option>
-  <option value="popup">Pop-up / Souk</option>
-  <option value="sports">Sports</option>
-  <option value="trade-fair">Trade Fair / Fashion</option>
-  <option value="food-festival">Food Festival</option>
-  <option value="outdoor">Outdoor / Adventure</option>
-</select>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  required
+                  className="input-standard"
+                >
+                  {CATEGORY_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </Step>

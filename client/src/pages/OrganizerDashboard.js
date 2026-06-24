@@ -13,6 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { getCategoryLabel } from '../utils/categories';
 
 /* ─── Inline styles (no new CSS file needed) ─── */
 const S = {
@@ -611,7 +612,7 @@ function EventCard({ ev, onEdit, onDelete }) {
           <div style={S.metaRow}><span style={S.metaIcon}>📅</span>{dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</div>
           <div style={S.metaRow}><span style={S.metaIcon}>🕐</span>{dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
           <div style={S.metaRow}><span style={S.metaIcon}>📍</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.venue}</span></div>
-          <div style={S.metaRow}><span style={S.metaIcon}>🏷</span>{ev.category}</div>
+          <div style={S.metaRow}><span style={S.metaIcon}>🏷</span>{getCategoryLabel(ev.category)}</div>
           <div style={S.metaRow}><span style={S.metaIcon}>💵</span><strong style={{ color: 'var(--text-accent)' }}>₦{Number(ev.price).toLocaleString()}</strong></div>
         </div>
 

@@ -1,17 +1,28 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 /**
  * Send OTP verification email
- * @param {string} to      - recipient email
- * @param {string} code    - plain 6-digit OTP code
- * @param {string} name    - recipient name for personalisation
+ * OTP is disabled for pilot — this function is built but not called during registration
+ * Re-enable by calling sendOTP() in attendeeAuth register + organizerAuth register
+ * RESEND_API_KEY must be set in Render env vars when re-enabling
+ *
+ * @param {string} to   - recipient email
+ * @param {string} code - plain 6-digit OTP code
+ * @param {string} name - recipient name for personalisation
  */
 async function sendOTP({ to, code, name }) {
+  // Guard — if key not set, warn and return silently instead of crashing server
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not set — OTP email skipped');
+    return;
+  }
+
+  // Initialize lazily so missing key never crashes the module on require
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
   try {
     await resend.emails.send({
-      from: 'Verse <onboarding@resend.dev>', // resend shared domain for pilot
+      from: 'Verse <onboarding@resend.dev>',
       to,
       subject: 'Your Verse verification code',
       html: `
@@ -23,7 +34,7 @@ async function sendOTP({ to, code, name }) {
             Hey ${name}, verify your email
           </h2>
           <p style="color: #666; font-size: 15px; margin-bottom: 32px; line-height: 1.6;">
-            Enter this code in the app to complete your registration. 
+            Enter this code in the app to complete your registration.
             It expires in 10 minutes.
           </p>
           <div style="background: #141414; border: 1px solid #242424; border-radius: 12px; padding: 28px; text-align: center; margin-bottom: 32px;">
