@@ -8,10 +8,42 @@ const jwt = require('jsonwebtoken');
 // Get all events — only future/current events for attendee feed
 router.get('/', async (req, res) => {
   try {
-    const events = await Event.find({
+    const { category, sort, type, from, to } = req.query;
+
+    const query = {
       date: { $gte: new Date() },
       status: { $ne: 'cancelled' },
-    }).populate('organizer', 'orgName');
+    };
+
+    // Filter by category chip (Concert, Rave, Festival, etc.)
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+
+    // Filter by free events
+    if (type === 'free') {
+      query.price = 0;
+    }
+
+    // Filter by date range — used for "This Week" section
+    if (from && to) {
+      query.date = {
+        $gte: new Date(from),
+        $lte: new Date(to),
+      };
+    } else if (from) {
+      query.date = { $gte: new Date(from) };
+    }
+
+    // Sort: newest (default) or popular (most tickets sold)
+    let sortOption = { date: 1 }; // default: soonest first
+    if (sort === 'newest') sortOption = { createdAt: -1 };
+    if (sort === 'popular') sortOption = { ticketsSold: -1 };
+
+    const events = await Event.find(query)
+      .sort(sortOption)
+      .populate('organizer', 'orgName');
+
     res.json(events);
   } catch (err) {
     res.status(500).json({ message: err.message });
