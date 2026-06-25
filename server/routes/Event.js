@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 // Get all events — only future/current events for attendee feed
 router.get('/', async (req, res) => {
   try {
-    const { category, sort, type, from, to } = req.query;
+    const { category, sort, type, from, to, area, areas } = req.query;
 
     const query = {
       date: { $gte: new Date() },
@@ -33,6 +33,22 @@ router.get('/', async (req, res) => {
       };
     } else if (from) {
       query.date = { $gte: new Date(from) };
+    }
+
+    // Filter by single area — exact match
+    // Used when attendee has no nearby areas defined
+    if (area) {
+      query.area = area;
+    }
+
+    // Filter by multiple areas — Near You section
+    // ?areas=Wuse,Maitama,Garki (comma-separated list built from AREA_NEARBY_MAP)
+    // Includes the user's own area + all nearby areas from the adjacency map
+    if (areas) {
+      const areaList = areas.split(',').map((a) => a.trim()).filter(Boolean);
+      if (areaList.length > 0) {
+        query.area = { $in: areaList };
+      }
     }
 
     // Sort: newest (default) or popular (most tickets sold)
@@ -69,7 +85,7 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
   console.log('Organizer ID:', req.organizerId);
 
   try {
-    const { title, description, date, venue, price, ticketsAvailable, category } = req.body;
+    const { title, description, date, venue, area, price, ticketsAvailable, category } = req.body;
 
     const parsedTickets = parseInt(ticketsAvailable);
 
@@ -78,6 +94,9 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
       description,
       date,
       venue,
+      // area is optional — events without an area won't appear in Near You
+      // but will still appear in all other discovery sections
+      area: area ?? '',
       price: parseFloat(price),
       ticketsAvailable: parsedTickets,
       totalCapacity: parsedTickets,
@@ -106,13 +125,14 @@ router.post('/', protect, upload.single('banner'), async (req, res) => {
 // Update an event (protected)
 router.put('/:id', protect, upload.single('banner'), async (req, res) => {
   try {
-    const { title, description, date, venue, price, ticketsAvailable, category } = req.body;
+    const { title, description, date, venue, area, price, ticketsAvailable, category } = req.body;
 
     const updateData = {
       title,
       description,
       date,
       venue,
+      area: area ?? '',
       price: parseFloat(price),
       ticketsAvailable: parseInt(ticketsAvailable),
       category,
@@ -192,6 +212,9 @@ router.post('/:id/register', async (req, res) => {
 
     await attendee.save();
 
+    // Decrement available tickets
+    // Note: free event registrations don't increment ticketsSold —
+    // ticketsSold is reserved for paid Paystack transactions only
     event.ticketsAvailable -= 1;
     await event.save();
 
@@ -260,7 +283,6 @@ router.post('/:id/cancel', protect, async (req, res) => {
     event.cancelledAt = new Date();
     await event.save();
 
-    // Find all successful transactions for this event
     const Transaction = require('../models/Transaction');
     const Ticket = require('../models/Ticket');
     const Attendee = require('../models/Attendee');
@@ -277,13 +299,12 @@ router.post('/:id/cancel', protect, async (req, res) => {
 
     for (const txn of transactions) {
       try {
-        // Trigger Paystack refund — full amount
         if (txn.providerTransactionId) {
           await axios.post(
             'https://api.paystack.co/refund',
             {
               transaction: txn.providerTransactionId,
-              amount: Math.round(Number(txn.amount) * 100), // kobo
+              amount: Math.round(Number(txn.amount) * 100),
             },
             {
               headers: {
@@ -294,17 +315,14 @@ router.post('/:id/cancel', protect, async (req, res) => {
           );
         }
 
-        // Update transaction status
         txn.status = 'refunded';
         await txn.save();
 
-        // Cancel all tickets on this transaction
         await Ticket.updateMany(
           { transactionId: txn._id },
           { $set: { status: 'cancelled' } }
         );
 
-        // Update attendee's registeredEvents status
         await Attendee.updateOne(
           {
             _id: txn.userId,

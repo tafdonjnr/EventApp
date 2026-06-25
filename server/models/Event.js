@@ -12,6 +12,16 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
     venue: String,
+
+    // Area within the city — used for "Near You" discovery queries
+    // Values must match ABUJA_AREAS constant in src/constants/areas.ts
+    // e.g. "Wuse", "Maitama", "Garki" etc.
+    area: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
     price: Number,
 
     // Original ticket capacity — set once at creation, never mutated
@@ -73,5 +83,8 @@ eventSchema.index({ date: 1, status: 1 });
 
 // category — attendee home screen filters by category
 eventSchema.index({ category: 1 });
+
+// area — used for Near You discovery queries
+eventSchema.index({ area: 1 });
 
 module.exports = mongoose.model('Event', eventSchema);
